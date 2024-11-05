@@ -1,0 +1,102 @@
+Location,Code,Idnum,Sum,BPRCOL,NA,PRED,SCREWT,SHOCK
+ASMEBR - Astoria-Megler Bridge,,,29,0,0,29,0,0
+B2J,BON,8,51,0,51,0,0,0
+B2J - Bonneville PH2 Juvenile,BON,8,226,0,226,0,0,0
+BADGEI,,,5,0,0,5,0,0
+"BADGEI - Badger Island, Columbia River",,,32,0,0,32,0,0
+BCC,BON,8,101,0,101,0,0,0
+BCC - BON PH2 Corner Collector,BON,8,477,0,477,0,0,0
+BCP - Butcher Creek Acclimation Pond,,,3,0,3,0,0,0
+BVP - Beaver Creek Acclimation Pond,,,4,0,4,0,0,0
+CHIWAR,CHIWAR,1,7871,0,0,0,0,7871
+CHIWAR - Chiwawa River,,,1,0,0,0,0,1
+CHIWAT,CHI_OUT,2,679,0,0,0,679,0
+"CHIWAT - Chiwawa River Trap, 0.5 km below CHIP acclimation pond",CHI_OUT,2,39687,0,0,0,39687,0
+CHL,CHI_OUT,2,2260,0,2260,0,0,0
+CHL - Lower Chiwawa River,CHI_OUT,2,1149,0,1149,0,0,0
+CHM - Chumstick Creek,,,1,0,1,0,0,0
+CHU,CHI_OUT,2,1280,0,1280,0,0,0
+CHU - Upper Chiwawa River,CHI_OUT,2,10,0,10,0,0,0
+CHW,,,3,0,3,0,0,0
+CHW - Chiwaukum Creek,,,66,0,66,0,0,0
+COLR1,,,1,0,0,1,0,0
+"COLR1 - Columbia River - mouth to Three Tree Point, WA (km 0-49)",,,2,0,0,2,0,0
+"CRESIS - Crescent Island, Columbia River",,,1,0,0,1,0,0
+ENA,,,1,0,1,0,0,0
+ENA - Upper Entiat River at rkm 17.1,,,1,0,1,0,0,0
+ENL - Lower Entiat River,,,1,0,1,0,0,0
+ESANIS,,,1,0,0,1,0,0
+"ESANIS - East Sand Island, Columbia River",,,3,0,0,3,0,0
+"FOUNDI - Foundation Island, Columbia River",,,2,0,0,2,0,0
+HANIS,,,4,0,0,4,0,0
+HANIS - Islands in the Hanford Reach of the Middle Columbia River,,,24,0,0,24,0,0
+ICL,ICL,1,16,0,16,0,0,0
+ICL - Lower Icicle Instream Array,IC_OUT,2,54,0,54,0,0,0
+ICM,,,2,0,2,0,0,0
+ICM - Middle Icicle Instream Array,,,7,0,7,0,0,0
+JDJ,JDJ,7,92,0,92,0,0,0
+JDJ - John Day Dam Juvenile,JDJ,7,552,0,552,0,0,0
+LENLKE,,,2,0,0,2,0,0
+"LENLKE - Lenore Lake, WA",,,12,0,0,12,0,0
+LMILIS,,,2,0,0,2,0,0
+"LMILIS - Little Miller Island, Columbia River",,,12,0,0,12,0,0
+LWB,WEN,4,158,0,158,0,0,0
+LWB - Lower Wenatchee Barge,WEN,4,481,0,481,0,0,0
+LWE,WEN,4,59,0,59,0,0,0
+LWE - Lower Wenatchee River,WEN,4,357,0,357,0,0,0
+LWN,,,5,0,5,0,0,0
+LWN - Little Wenatchee River,,,10,0,10,0,0,0
+MC2 - McNary Washington Shore Ladder,MCJ,6,6,0,6,0,0,0
+MCJ,MCJ,6,64,0,64,0,0,0
+MCJ - McNary Dam Juvenile,MCJ,6,354,0,354,0,0,0
+MCL,,,1,0,1,0,0,0
+MCL - Lower Mission Creek Instream,,,3,0,3,0,0,0
+NAL,NASON_OUT,2,2313,0,2313,0,0,0
+NAL - Lower Nason Creek,NASON_OUT,2,295,0,295,0,0,0
+NASONC,NASONR,1,9576,0,0,0,26,9550
+NASONC - Nason Creek (tributary to Wenatchee River),NASON_OUT,2,1744,0,0,0,1741,3
+NAU,NASON_OUT,2,1116,0,1116,0,0,0
+NAU - Upper Nason Creek,,,2,0,2,0,0,0
+PD5,PD_TWX,9,7,0,7,0,0,0
+PD5 - Columbia River Estuary rkm 62,PD_TWX,9,42,0,42,0,0,0
+PD6,PD_TWX,9,16,0,16,0,0,0
+PD6 - Columbia River Estuary rkm 68,PD_TWX,9,80,0,80,0,0,0
+PD7,PD_TWX,9,1,0,1,0,0,0
+PD7 - Columbia River Estuary rkm 70,PD_TWX,9,1,0,1,0,0,0
+PD8,PD_TWX,9,2,0,2,0,0,0
+PD8 - Columbia River Estuary rkm 82,PD_TWX,9,10,0,10,0,0,0
+PES,,,3,0,3,0,0,0
+PES - Peshastin Creek,,,7,0,7,0,0,0
+PEU - Upper Peshastin Creek,,,1,0,1,0,0,0
+POTHOL,,,1,0,0,1,0,0
+"POTHOL - Potholes Reservoir, Grant County, Washington",,,1,0,0,1,0,0
+PRH - Priest Rapids Hatchery Outfall,,,2,0,2,0,0,0
+RIA,RIA_RIS,5,13,0,13,0,0,0
+RIA - Rock Island Adult,RIA_RIS,5,43,0,43,0,0,0
+RICEIS - Rice Island,,,1,0,0,1,0,0
+RICHIS,,,3,0,0,3,0,0
+"RICHIS - Richland Island, Columbia River",,,9,0,0,9,0,0
+RIS,RIA_RIS,5,4,4,0,0,0,0
+RIS - Rock Island Dam,RIA_RIS,5,54,54,0,0,0,0
+RISFWC,RIA_RIS,5,1,0,0,1,0,0
+RISFWC - Rock Island Forebay Waterbird Colony,,,18,0,0,18,0,0
+ROCKIS,,,1,0,0,1,0,0
+RRF - Rocky Reach Fishway,,,1,0,1,0,0,0
+RSH,,,1,0,1,0,0,0
+RSH - Ringold Springs Hatch. Outfall,,,3,0,3,0,0,0
+TTOWER,,,2,0,0,2,0,0
+"TTOWER - Transmission towers near Troutdale, OR",,,7,0,0,7,0,0
+TUF,TUF,3,25,0,25,0,0,0
+TUF - Tumwater Dam Adult Fishway,TUF,3,138,0,138,0,0,0
+TWX,PD_TWX,,26,0,26,0,0,0
+TWX - Estuary Towed Array (Exp.),PD_TWX,,105,0,105,0,0,0
+UWE,,,276,0,276,0,0,0
+UWE - Upper Wenatchee River,,,182,0,182,0,0,0
+WENA4T,WEN,4,65,0,0,0,65,0
+"WENA4T - Lower Wenatchee trap, 2.8km below Mission Creek",WEN,4,3787,0,0,0,3787,0
+WTL,,,1,0,1,0,0,0
+"WTL - White River, Wenatchee Basin",,,40,0,40,0,0,0
+CHIP - Chiwawa Rearing Pond,CHIP,1,0,0,0,0,0,0
+NAF - Nason Acclimation Facility,NAF,1,0,0,0,0,0,0
+LEAV - Leavenworth National Fish Hatchery,LEAV,2,0,0,0,0,0,0
+Wenatchee River,WENR,2,0,0,0,0,0,0

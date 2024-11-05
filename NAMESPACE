@@ -1,0 +1,6 @@
+exportPattern("^[[:alpha:]]+")
+exportClasses("tmb_list")
+exportMethods('MStmb')
+importFrom("stats", "lm", "rnorm", "runif", 'dnorm')
+import('RTMB','lme4', 'ggplot2', 'tidyr', 'dplyr')
+export('f')

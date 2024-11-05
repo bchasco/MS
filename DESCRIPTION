@@ -1,0 +1,12 @@
+Package: MS
+Type: Package
+Title: Multistate mark-recapture analysis
+Version: 0.1.0
+Author: Brandon Chasco
+Maintainer: The package maintainer <brandon.chasco@dfw.wa.gov>
+Description: 
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

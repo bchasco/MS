@@ -1,0 +1,67 @@
+Location,Code,Idnum,n
+B2J - Bonneville PH2 Juvenile,BON,8,14157
+BBT - Touchet River at Bolles Bridge,,,1
+BCC - BON PH2 Corner Collector,BON,8,3338
+BCP - Butcher Creek Acclimation Pond,,,6518
+BO1 - Bonneville Bradford Is. Ladder,BON,8,55
+BO2 - Bonneville Cascades Is. Ladder,BON,8,7
+BO3 - Bonneville WA Shore Ladder/AFF,BON,8,96
+BO4 - Bonneville WA Ladder Slots,BON,8,157
+BVP,BVR,2,9996
+BVP - Beaver Creek Acclimation Pond,BVR,2,8268
+CHIWAR,CHIWAR,1,20532
+"CHIWAT - Chiwawa River Trap, 0.5 km below CHIP acclimation pond",CHI_OUT,2,15
+CHL - Lower Chiwawa River,CHI_OUT,2,5961
+CHM - Chumstick Creek,,,169
+CHP - Chiwawa Acc. Pond,CHIWAR,1,1405
+CHU - Upper Chiwawa River,CHIWAR,1,10
+CHW - Chiwaukum Creek,,,73
+CML - Chewuch River Middle Lower,,,2
+CWP - Chewuch Acclimation Pond,,,1
+"DWORMS - Dworshak NFH, release into mainstem Clearwater River",,,4
+EBO - East Bank Hatchery Outfall,,,6
+ENA - Upper Entiat River at rkm 17.1,,,1
+ENL - Lower Entiat River,,,1
+IC5 - Icicle Creek Historic Channel,,,3
+ICL - Lower Icicle Instream Array,ICL_OUT,2,921
+ICM - Middle Icicle Instream Array,ICL_OUT,2,28
+ICR,ICR,1,55127
+JDJ - John Day Dam Juvenile,JDJ,7,6392
+JDPI - Preacher's Island downstream of John Day Dam,JDJ,7,6
+JO1 - John Day South Fish Ladder,JDJ,7,15
+JO2 - John Day North Fish Ladder,JDJ,7,17
+LHC - Leavenworth NFH Coho Releases,ICR,1,6049
+LNF - Leavenworth NFH Adult Ladder,,,10
+LWB - Lower Wenatchee Barge,WEN,4,5111
+LWE - Lower Wenatchee River,WEN,4,339
+LWN - Little Wenatchee River,,,1
+MC1 - McNary Oregon Shore Ladder,MCJ,6,105
+MC2 - McNary Washington Shore Ladder,MCJ,6,49
+MCJ - McNary Dam Juvenile,MCJ,6,10892
+MCL - Lower Mission Creek Instream,,,85
+MEM - Eightmile Acclimation Pond,,,3
+NAL - Lower Nason Creek,NAL_OUT,2,10832
+NASONC - Nason Creek (tributary to Wenatchee River),NAL_OUT,2,55
+NASONR,NAR,1,38681
+NAU - Upper Nason Creek,NAR,1,660
+OKD - Penticton (Okanagan Lake) Dam,,,5
+PD5 - Columbia River Estuary rkm 62,PD_TWX,9,271
+PD6 - Columbia River Estuary rkm 68,PD_TWX,9,222
+PD7 - Columbia River Estuary rkm 70,PD_TWX,9,27
+PD8 - Columbia River Estuary rkm 82,PD_TWX,9,252
+PES - Peshastin Creek,,,15
+PEU - Upper Peshastin Creek,,,15
+PRA - Priest Rapids Adult,,,43
+PRH - Priest Rapids Hatchery Outfall,,,15
+RFP - Rolfing Acclimation Pond,,,2812
+RIA - Rock Island Adult,RIA_RIS,5,263
+RIS - Rock Island Dam,RIA_RIS,5,435
+TD1 - The Dalles East Fish Ladder,,,44
+TD2 - The Dalles North Fish Ladder,,,4
+TUF - Tumwater Dam Adult Fishway,TUF,3,404
+TWX - Estuary Towed Array (Exp.),PD_TWX,9,3005
+UWE - Upper Wenatchee River,,,1129
+"WENA4T - Lower Wenatchee trap, 2.8km below Mission Creek",WEN,4,55
+WENR,WENR,2,15142
+"WTL - White River, Wenatchee Basin",,,1
+ZSL - Zosel Dam Combined,,,1
