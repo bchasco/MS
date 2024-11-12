@@ -17,13 +17,14 @@ combined_data$`Event Site Code Value` <- do.call(rbind,strsplit(combined_data$`E
 
 #Change mark site to actual release site
 combined_data <- combined_data %>%
+  mutate(day_diff = as.numeric(lubridate::mdy(`Event Date MMDDYYYY`) - lubridate::mdy(`Release Date`))) %>%
   mutate(`Event Date MMDDYYYY` = ifelse(`Event Type Name` == "Mark", `Release Date`, `Event Date MMDDYYYY`))
 
 tx <- combined_data %>%
   group_by(`Event Site Name`) %>%
   summarize(n = n())
 
-# write.csv(tx, file = "data/hatchery_lookup.csv")
+# write.csv(tx, file = "data/hatchery_lookup2.csv")
 
 # Preview the combined data
 head(combined_data)
@@ -34,7 +35,7 @@ head(combined_data)
 recode <- read.csv("data/hatchery_lookup.csv", header = TRUE)
 
 #These are locations to use in the analysis
-locs <- c(1,2,4,6,7,8,9) #Location to include, Leaveout Tumawter and RIS/RIA
+locs <- c(1,2,3,4,5,6,7,8,9) #Location to include, Leaveout Tumawter and RIS/RIA
 dimnames <- data.frame("Caploc" = c("Trib","First_Trap","TUF","WEN","RIS_RIA","MCJ","JDJ","BON","TWX_EST"),
                        "dimID" = c(1,2,3,4,5,6,7,8,9))
 
@@ -88,7 +89,7 @@ ch <- ch %>%
 
 
 #Remove recaptures not represented by the location lookup above.
-myvars <- c('loc','stage')
+myvars <- c('loc','stage', 'Release Site', "Event Species Name")
 
 # myvars <- c('loc','tagSite', 'stage')
 ch_complete <- ch[,] %>%
@@ -99,13 +100,13 @@ ch_complete <- ch[,] %>%
   filter(IDnum!="")%>%
   mutate(stage = ifelse(stage == "sub" | stage == "yr", 1, 2)) %>%
   filter(init_num%in%(locs)) %>% #be suer you don't take capture histories for fish tagged upstream
-  select(`Tag Code`, stage, IDnum, loc_code) %>%
+  select(`Tag Code`, stage, IDnum, loc_code, `Event Species Name`) %>%
   left_join(dimnames, by = c("IDnum" = "dimID")) %>% #This adds the capture locations from dimnames
   mutate(loc = ifelse(!is.na(Caploc), Caploc, IDnum)) %>%
   filter(loc %in% dimnames$Caploc[dimnames$dimID%in%locs]) %>%
   mutate(loc = factor(loc, levels = dimnames$Caploc[locs])) %>%
-  filter(loc %in% c("Trib", "First_Trap", "WEN", "MCJ", "BON")) %>%
-  group_by(`Tag Code`, loc) %>%
+  # filter(loc %in% c("Trib", "First_Trap", "WEN", "MCJ", "JDJ", "BON", "TWX_EST")) %>%
+  group_by(`Tag Code`, loc, `Event Species Name`) %>%
   summarise(stage = first(stage))  %>% #REmove duplicates and return the stage when a fish was first detected at a location
   group_by(`Tag Code`) %>%
 
@@ -114,10 +115,10 @@ ch_complete <- ch[,] %>%
   mutate(loc = factor(loc, levels = dimnames$Caploc[locs])) %>% #You have to reorder the locations, AGAIN!!
 
   # Remove duplicates by keeping only the max cum_time for each loc
-  group_by(`Tag Code`, loc) %>%
+  group_by(`Tag Code`, loc, `Event Species Name`) %>%
   arrange(`Tag Code`, loc) %>%
   group_by(`Tag Code`) %>%
-
+  mutate(`Release Site` = first(`Event Species Name`)) %>%
   # Collapse the cum_time values across locations into a vector or string
   # summarise(cum_time_pattern = paste(loc, cum_time,init_year,event_day, stageID, collapse = ", ")) %>%
   summarise(
@@ -180,9 +181,6 @@ ch_list <- lapply(seq_along(ch_list), function(i) {
 
 WENh <- do.call(rbind, lapply(ch_list, function(x) (x$X)))
 WENh[WENh=='NA'] <- NA
-# WENh <- WENh %>%
-  # group_by(id) %>%
-  # mutate(tagSite = first(na.omit(tagSite)))
 
 
-save(WENh, file="data/WEN_hatchery.rda")
+# save(WENh, file="data/NASON_allFish.rda")

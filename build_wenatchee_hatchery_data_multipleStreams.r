@@ -88,7 +88,7 @@ ch <- ch %>%
 
 
 #Remove recaptures not represented by the location lookup above.
-myvars <- c('loc','stage')
+myvars <- c('loc','stage', 'Release Site')
 
 # myvars <- c('loc','tagSite', 'stage')
 ch_complete <- ch[,] %>%
@@ -99,13 +99,13 @@ ch_complete <- ch[,] %>%
   filter(IDnum!="")%>%
   mutate(stage = ifelse(stage == "sub" | stage == "yr", 1, 2)) %>%
   filter(init_num%in%(locs)) %>% #be suer you don't take capture histories for fish tagged upstream
-  select(`Tag Code`, stage, IDnum, loc_code) %>%
+  select(`Tag Code`, stage, IDnum, loc_code, `Release Site`) %>%
   left_join(dimnames, by = c("IDnum" = "dimID")) %>% #This adds the capture locations from dimnames
   mutate(loc = ifelse(!is.na(Caploc), Caploc, IDnum)) %>%
   filter(loc %in% dimnames$Caploc[dimnames$dimID%in%locs]) %>%
   mutate(loc = factor(loc, levels = dimnames$Caploc[locs])) %>%
   filter(loc %in% c("Trib", "First_Trap", "WEN", "MCJ", "BON")) %>%
-  group_by(`Tag Code`, loc) %>%
+  group_by(`Tag Code`, loc, `Release Site`) %>%
   summarise(stage = first(stage))  %>% #REmove duplicates and return the stage when a fish was first detected at a location
   group_by(`Tag Code`) %>%
 
@@ -114,10 +114,10 @@ ch_complete <- ch[,] %>%
   mutate(loc = factor(loc, levels = dimnames$Caploc[locs])) %>% #You have to reorder the locations, AGAIN!!
 
   # Remove duplicates by keeping only the max cum_time for each loc
-  group_by(`Tag Code`, loc) %>%
+  group_by(`Tag Code`, loc, `Release Site`) %>%
   arrange(`Tag Code`, loc) %>%
   group_by(`Tag Code`) %>%
-
+  mutate(`Release Site` = first(`Release Site`)) %>%
   # Collapse the cum_time values across locations into a vector or string
   # summarise(cum_time_pattern = paste(loc, cum_time,init_year,event_day, stageID, collapse = ", ")) %>%
   summarise(
@@ -185,4 +185,4 @@ WENh[WENh=='NA'] <- NA
   # mutate(tagSite = first(na.omit(tagSite)))
 
 
-save(WENh, file="data/WEN_hatchery.rda")
+save(WENh, file="data/WEN_hatchery_multipleStreams.rda")

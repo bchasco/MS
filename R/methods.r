@@ -25,14 +25,14 @@ setGeneric("MStmb", function(object) standardGeneric("MStmb"))
 # Method building and runnning the tmb model
 setMethod("MStmb", "tmb_list", function(object) {
 
+  object@MR_settings$dm <- create_design_matrices(object@MR_settings, object@data)
+
   tmb.data <<- list()
 
   tmb.data[['data']] <<- object@data %>%
-    mutate(state = ifelse(is.na(stage), "unk", stage)) %>%
+    mutate(state = ifelse(is.na(stage), "unk", "yr")) %>%
     mutate(state = factor(state, levels = c("yr","unk"))) %>%
-    mutate(loc = factor(loc, levels = c("Trib","First_Trap","Wen","MCJ","JDJ","BON","TWX_EST"))) %>%
-    mutate(tag_site = "Trib",
-           last_site = "TWX_EST") %>%
+    mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
     droplevels()
 
   #
@@ -61,8 +61,26 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data[['ns']] <<- ns <- length(levels(tmb.data$state))
   tmb.data[['ni']] <<- ni <- length(unique(tmb.data$data$id))
 
-  phi_dim <- sapply(tmb.data[['dm']][['phi']],function(x){ncol(x)})
+  phi_dim <- list()
+  phi_states <- length(tmb.data[['dm']][['phi']])
+  for(i in 1:phi_states){
+    phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[i]])
+  }
   tmb.data[['phi_dim']] <<- phi_dim
+
+  p_dim <- list()
+  p_states <- length(tmb.data[['dm']][['p']])
+  for(i in 1:p_states){
+    p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[i]])
+  }
+  tmb.data[['p_dim']] <<- p_dim
+
+  lam_dim <- list()
+  lam_states <- length(tmb.data[['dm']][['lam']])
+  for(i in 1:lam_states){
+    lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[i]])
+  }
+  tmb.data[['lam_dim']] <<- lam_dim
 
   eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x)})
   tmb.data[['eta_dim']] <<- eta_dim
@@ -71,10 +89,12 @@ setMethod("MStmb", "tmb_list", function(object) {
     tmb.data[['eta_dim']] <<- eta_dim
   }
 
-  parameters <<- list(phi = rep(0,sum(phi_dim)),
-                     p = matrix(0, ns-1, length(levels(tmb.data$data$loc))-2),
-                     lam = rep(0),
-                     eta = rep(0,sum(eta_dim)))
+  tmb.data$MR_settings <<- object@MR_settings
+
+  parameters <<- list(phi = rep(0 , sum(unlist(phi_dim))),
+                     p = rep(0 , sum(unlist(p_dim))),
+                     lam = rep(0 , sum(unlist(lam_dim))),
+                     eta = rep(0 , sum(eta_dim)))
 
   environment(test_f) <- .GlobalEnv
 
