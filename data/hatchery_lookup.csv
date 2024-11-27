@@ -39,3 +39,28 @@ CHIP - Chiwawa Rearing Pond,NASONR,1,10086
 CASC - Cascade Hatchery (ODFW) near Cascade Locks,NASONR,1,18504
 BCP - Butcher Creek Acclimation Pond,NASONR,1,6517
 EBNK - East Bank Hatchery,CHIWAWAR,1,10440
+"CHIWAT - Chiwawa River Trap, 0.5 km below CHIP acclimation pond",CHI_OUT,1,1
+NASONC - Nason Creek (tributary to Wenatchee River),NASONR,1,1
+"WENA4T - Lower Wenatchee trap, 2.8km below Mission Creek , Mark",Upr_WEN,1,1
+CHIWAR -,CHIWAWAR,1,1
+NASONC -,NASONR,1,1
+B2J -,BON,8,
+BCC -,BON,8,
+CHL -,,2,
+CHW -,,2,
+ICL -,,2,
+ICM -,,2,
+JDJ -,,7,
+LWB -,,4,
+LWE -,,4,
+LWN -,,4,
+MCJ -,,6,
+NAL -,,2,
+NAU -,,2,
+PD6 -,,9,
+RIA -,,5,
+TUF -,,3,
+TWX -,,9,
+UWE -,,4,
+WENA4T -,,4,
+,,,

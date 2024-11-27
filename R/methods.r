@@ -25,29 +25,21 @@ setGeneric("MStmb", function(object) standardGeneric("MStmb"))
 # Method building and runnning the tmb model
 setMethod("MStmb", "tmb_list", function(object) {
 
-  object@MR_settings$dm <- create_design_matrices(object@MR_settings, object@data)
+  # object@MR_settings$pred_data <- pred.grid(data = object@data)
+
+  design_matrices <- create_design_matrices(object@MR_settings, object@data)
+  object@MR_settings$dm <- design_matrices$dm
+  object@MR_settings$pred_dm <- design_matrices$pred_dm
+
 
   tmb.data <<- list()
 
-  tmb.data[['data']] <<- object@data %>%
-    mutate(state = ifelse(is.na(stage), "unk", "yr")) %>%
-    mutate(state = factor(state, levels = c("yr","unk"))) %>%
-    mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-    droplevels()
+  tmb.data[['data']] <<- object@data #%>%
+    # mutate(state = ifelse(is.na(stage), "unk", "yr")) %>%
+    # mutate(state = factor(state, levels = c("yr","unk"))) %>%
+    # mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
+    # droplevels()
 
-  #
-  # tmp_WEN <- tmb.data[['data']] %>%
-  #   filter(loc!=tag_site &
-  #                  loc!=last_site) %>%
-  #   droplevels()
-  #
-  #
-  # m <-  tryCatch(model.matrix(formula('state ~ loc'), tmp_WEN),
-  #                error = function(e) e,
-  #                warning = function(w) w)
-  #
-  #
-  # tmb.data[['m']] <<- m
 
   tmb.data[['dm']] <<- object@MR_settings$dm
 
@@ -62,27 +54,54 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data[['ni']] <<- ni <- length(unique(tmb.data$data$id))
 
   phi_dim <- list()
+  phi_re_dim <- list()
   phi_states <- length(tmb.data[['dm']][['phi']])
   for(i in 1:phi_states){
-    phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[i]])
+    if(length(object@MR_settings$frms$phi)>1){
+      phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[i]]$X)
+    }else{
+      phi_dim[[1]] <- ncol(tmb.data[['dm']][['phi']][[1]]$X)
+    }
+    if(length(tmb.data[['dm']][['phi']][[i]][['reTrms']])>0){
+      phi_re_dim[[i]] <- sum(tmb.data[['dm']][['phi']][[i]][['reTrms']]$nl)
+    }else{
+      phi_re_dim[[i]] <- 0
+    }
   }
   tmb.data[['phi_dim']] <<- phi_dim
+  tmb.data[['phi_re_dim']] <<- phi_re_dim
 
   p_dim <- list()
+  p_re_dim <- list()
   p_states <- length(tmb.data[['dm']][['p']])
   for(i in 1:p_states){
-    p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[i]])
+    if(length(object@MR_settings$frms$p)>1){
+      p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[i]]$X)
+    }else{
+      p_dim[[1]] <- ncol(tmb.data[['dm']][['p']][[1]]$X)
+    }
+    if(length(tmb.data[['dm']][['p']][[i]][['reTrms']])>0){
+      p_re_dim[[i]] <- sum(tmb.data[['dm']][['p']][[i]][['reTrms']]$nl)
+    }else{
+      p_re_dim[[i]] <- 0
+    }
   }
   tmb.data[['p_dim']] <<- p_dim
+  tmb.data[['p_re_dim']] <<- p_re_dim
 
   lam_dim <- list()
   lam_states <- length(tmb.data[['dm']][['lam']])
   for(i in 1:lam_states){
-    lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[i]])
+    if(length(object@MR_settings$frms$lam)>1){
+      lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[i]]$X)
+    }else{
+      lam_dim[[1]] <- ncol(tmb.data[['dm']][['lam']][[1]]$X)
+    }
   }
   tmb.data[['lam_dim']] <<- lam_dim
 
-  eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x)})
+  eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x$X)})
+  eta_dim <- eta_dim[1]
   tmb.data[['eta_dim']] <<- eta_dim
   if(ns < 3){
     eta_dim <- numeric(0)
@@ -92,15 +111,20 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data$MR_settings <<- object@MR_settings
 
   parameters <<- list(phi = rep(0 , sum(unlist(phi_dim))),
+                      phi_re = rep(0 , sum(unlist(phi_re_dim))),
                      p = rep(0 , sum(unlist(p_dim))),
+                     p_re = rep(0 , sum(unlist(p_re_dim))),
                      lam = rep(0 , sum(unlist(lam_dim))),
-                     eta = rep(0 , sum(eta_dim)))
+                     eta = rep(0 , sum(unlist(eta_dim))),
+                     sig = 0)
 
   environment(test_f) <- .GlobalEnv
 
   obj <- RTMB::MakeADFun(test_f,
-                         parameters)
-
+                         parameters,
+                         silent = FALSE,
+                         random = c("phi_re", "p_re"))
+  #
   object@TMB$obj <- obj
   object@TMB$obj$tmb.data <- tmb.data
 
@@ -108,8 +132,6 @@ setMethod("MStmb", "tmb_list", function(object) {
                            obj$fn,
                            obj$gr
                            )
-  # object@TMB$frm <- frm
-  # object@TMB$m <- m
   object@TMB$rep <- obj$report()
 
   object@TMB$parameters <- parameters

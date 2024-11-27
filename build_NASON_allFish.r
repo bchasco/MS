@@ -61,6 +61,7 @@ ch <- combined_data[,] %>%
            `Event Year YYYY`,
            `Event Site Code Value`,
            event_day, .keep_all = TRUE)
+
 # Create the lookup table
 species_lookup <- ch %>%
   distinct(`Tag Code`, `Event Species Name`) %>%

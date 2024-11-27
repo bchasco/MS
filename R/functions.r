@@ -96,8 +96,6 @@ createStateArray <- function(formula, covars) {
   unique_values <- lapply(terms, function(term) sort(unique(covars[[term]])))
   names(unique_values) <- terms
 
-  # Print unique values for debugging
-  print(unique_values)
 
   # Define array dimensions based on unique values of each covariate
   dims <- sapply(unique_values, length)
@@ -127,64 +125,114 @@ test_f <- function(parms){
   nll <- 0
   nll2 <- 0
 
-  gamma <- array(0,dim = c(ns,ns, length(levels(data$loc))), #),#,ni,
+  ni <- length(unique(data$id))
+  gamma <- array(0,dim = c(ns,ns, length(levels(data$loc)), ni), #),#,ni,
                  dimnames = list(next_state = levels(state),
                                  current_state = levels(state),
-                                 j = levels(data$loc)))
-  omega <- array(0,dim = c(ns,ns,length(levels(data$loc))), #),#,ni
+                                 j = levels(data$loc),
+                                 i = 1:ni))
+  gamma_tmp <- array(0,dim = c(ns,ns, length(levels(data$loc)), ni), #),#,ni,
                  dimnames = list(next_state = levels(state),
                                  current_state = levels(state),
-                                 j = levels(data$loc)))
+                                 j = levels(data$loc),
+                                 i = 1:ni))
+  omega <- array(0,dim = c(ns,ns,length(levels(data$loc)), ni), #),#,ni
+                 dimnames = list(next_state = levels(state),
+                                 current_state = levels(state),
+                                 j = levels(data$loc),
+                                 i = 1:ni))
+
 
   #Fill the survival list
   phi_s <- list()
   icnt <- 0
-  for(i in seq_along(phi_dim)){
-    if(length(phi_dim[[i]])>1){
-      phi_s[[i]] <- phi[(icnt+1):phi_dim[[i]]] #phi is a vector
-      icnt <- sum(phi_dim[[i]])
-    }else{
+  if(length(phi_dim)>1){
+    for(i in seq_along(phi_dim)){
+      phi_s[[i]] <- phi[(icnt+1):(icnt+phi_dim[[i]])] #phi is a vector
+      icnt <- icnt + sum(phi_dim[[i]])
+    }
+  }else{
+    for(i in 1:(ns-1)){
       phi_s[[i]] <- phi #phi is a vector
     }
   }
 
   #Fill the survival list
+  phi_re_s <- list()
+  icnt <- 0
+  if(length(phi_re_dim)>1){
+    for(i in seq_along(phi_re_dim)){
+      if(phi_re_dim[[i]]>0){
+        phi_re_s[[i]] <- phi_re[(icnt+1):(icnt+phi_re_dim[[i]])] #phi is a vector
+      }else{
+        phi_re_s[[i]] <- NULL
+      }
+      icnt <- icnt + sum(phi_re_dim[[i]])
+    }
+  }else{
+    for(i in 1:(ns-1)){
+      phi_re_s[[i]] <- phi_re #phi is a vector
+    }
+  }
+
+  #Fill the detection list
   p_s <- list()
   icnt <- 0
-  for(i in seq_along(p_dim)){
-    if(length(p_dim[[i]])>1){
-      p_s[[i]] <- p[(icnt+1):p_dim[[i]]] #phi is a vector
-      icnt <- sum(p_dim[[i]])
-    }else{
-      p_s[[i]] <- p #phi is a vector
+  if(length(p_dim)>1){
+    for(i in seq_along(p_dim)){
+      p_s[[i]] <- p[(icnt+1):(icnt + p_dim[[i]])] #phi is a vector
+      icnt <- icnt + sum(p_dim[[i]])
+    }
+  }else{
+    for(i in 1:(ns-1)){
+      p_s[[i]] <- p #p is a vector
     }
   }
 
   #Fill the survival list
-  lam_s <- list()
+  p_re_s <- list()
   icnt <- 0
-  for(i in seq_along(lam_dim)){
-    if(length(lam_dim[[i]])>1){
-      lam_s[[i]] <- lam[(icnt+1):lam_dim[[i]]] #phi is a vector
-      icnt <- sum(lam_dim[[i]])
-    }else{
-      lam_s[[i]] <- lam #phi is a vector
+  if(length(p_re_dim)>1){
+    for(i in seq_along(p_re_dim)){
+      if(p_re_dim[[i]]>0){
+        p_re_s[[i]] <- p_re[(icnt+1):(icnt+p_re_dim[[i]])] #phi is a vector
+      }else{
+        p_re_s[[i]] <- NULL
+      }
+      icnt <- icnt + sum(p_re_dim[[i]])
+    }
+  }else{
+    for(i in 1:(ns-1)){
+      p_re_s[[i]] <- p_re #phi is a vector
     }
   }
 
-  ii <- 1
+  #Fill the last survival location list
+  lam_s <- list()
+  icnt <- 0
+  if(length(lam_dim)>1){
+    for(i in seq_along(lam_dim)){
+      lam_s[[i]] <- lam[(icnt+1):(icnt + lam_dim[[i]])] #phi is a vector
+      icnt <- icnt + sum(lam_dim[[i]])
+    }
+  }else{
+    for(i in 1:(ns-1)){
+      lam_s[[i]] <- lam #lam is a vector
+    }
+  }
+
 
   phi_tmp <- c(RTMB::plogis(phi),RTMB::plogis(lam))
   p_tmp <- c(RTMB::plogis(p),RTMB::plogis(lam))
 
-  id_cnt <- 1
-  for(i in unique(data$id)){
+  id_cnt <- 1 #fish group increment
+  ii <- 1 #design matrix increment
+  eta_ii <- 1 #transition matrix increment
 
+  for(i in unique(data$id)){
     #fill the gamma matrix,
     #Observation for the ith "fish"
     i_obs <- as.integer(data$state[data$id==i])
-    # i_obs[is.na(i_obs)] <- 2
-
     #sample size
     n_i <- max(data$n[data$id == i])
 
@@ -192,8 +240,10 @@ test_f <- function(parms){
     init_loc <- min(which(i_obs < ns,arr.ind=TRUE))
 
     #initial state
-    init_state <- i_obs[1]
-    last_loc <- max(which(i_obs == 1,arr.ind=TRUE))
+    init_state <- i_obs[init_loc]
+
+    last_loc <- max(which(i_obs < ns,arr.ind=TRUE))
+
 
     if(MR_settings$mod=="CJS"){
       chi_i <- 1
@@ -204,7 +254,7 @@ test_f <- function(parms){
       }
       if(last_loc>1){
         for(j in (init_loc+1):last_loc){
-          y_i <- ifelse(i_obs[j]==1, 1., 0.)
+          y_i <- ifelse(i_obs[j]<ns, 1., 0.)
           nll2 <- nll2 - sum(RTMB::dbinom(1., 1., phi_tmp[j-1], log=TRUE)) * n_i
           nll2 <- nll2 - sum(RTMB::dbinom(y_i, 1, p_tmp[j-1], log=TRUE)) * n_i
         }
@@ -215,39 +265,57 @@ test_f <- function(parms){
     if(MR_settings$mod=="MS"){
 
       delta <- rep(0,ns)
-      delta[1] <- 1
-
+      delta[init_state] <- 1
 
       prods <- list(RTMB::diag(1, ns))
+
       for(j in (init_loc+1):length(i_obs)){
         if(j < length(i_obs)){
           for(s in 1:(ns-1)){
-            gamma[s,s,j] <- t(dm$phi[[s]][ii,]) %*% phi_s[[s]] #phi[s,j-1]
-            omega[s,s,j] <- t(dm$p[[s]][ii,]) %*% p_s[[s]]
-            if(ns>2){
-              gamma[1,2] <- dm$eta[[1]][ii,] %*% eta
+            if(phi_dim[[s]]>0){
+              gamma[s,s,j,id_cnt] <- t(dm$phi[[s]]$X[ii,]) %*% phi_s[[s]]
+              if(phi_re_dim[[s]]>0){
+                gamma[s,s,j,id_cnt] <- gamma[s,s,j,id_cnt] + t(dm$phi[[s]]$reTrms$Zt[,ii]) %*% phi_re_s[[s]]
+              }
+            }else{
+              gamma[s,s,j,id_cnt] <- -Inf
+            }
+
+            omega[s,s,j,id_cnt] <- t(dm$p[[s]]$X[ii,]) %*% p_s[[s]]
+            if(p_re_dim[[s]]>0){
+              omega[s,s,j,id_cnt] <- omega[s,s,j,id_cnt] + t(dm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]]
+            }
+
+            if(ns>2 & s==1){
+              gamma[1,2,j,id_cnt] <- dm$eta[[1]]$X[eta_ii,] %*% eta
             }
           }
-          ii <- ii + 1
+          ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii
+          eta_ii <- eta_ii + 1
         }
-        # print(dm$lam[[s]][id_cnt,])
+
         if(j == length(i_obs)){
           for(s in 1:(ns-1)){
-            gamma[s,s,j] <- t(dm$lam[[s]][id_cnt,]) %*% lam_s[[s]]
-            omega[s,s,j] <- t(dm$lam[[s]][id_cnt,]) %*% lam_s[[s]]
-            if(ns>2){
-              gamma[1,2,j] <- data$eta[[1]][ii,] %*% eta
+            gamma[s,s,j,id_cnt] <- t(dm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]]
+            omega[s,s,j,id_cnt] <- t(dm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]]
+            if(ns>2 & s==1){
+              gamma[1,2,j,id_cnt] <- dm$eta[[1]]$X[eta_ii,] %*% eta
             }
           }
+          eta_ii <- eta_ii + 1
         }
-        gamma[1:ns,ns,j] <- 1
-        omega[1:ns,ns,j] <- 1
+
+        gamma[,ns,j,id_cnt] <- 1
+        gamma_tmp[,,j,id_cnt] <- gamma[,,j,id_cnt]
+        omega[,ns,j,id_cnt] <- 1
+
         for(s in 1:(ns-1)){
-          gamma[s,s:ns,j] <- exp((gamma[s,s:ns,j]))/sum(exp((gamma[s,s:ns,j])))
-          omega[s,s:ns,j] <- exp(omega[s,s:ns,j])/sum(exp(omega[s,s:ns,j]))
+          gamma[s,s:ns,j,id_cnt] <- exp((gamma[s,s:ns,j,id_cnt]))/sum(exp(gamma[s,s:ns,j,id_cnt]))
+          omega[s,c(s,ns),j,id_cnt] <- exp(omega[s,c(s,ns),j,id_cnt])/sum(exp(omega[s,c(s,ns),j,id_cnt]))
         }
-        prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*% gamma[,,j] %*% RTMB::diag(omega[,i_obs[j],j])
-        # print(gamma[,])
+
+
+        prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*% gamma[,,j,id_cnt] %*% RTMB::diag(omega[,i_obs[j],j,id_cnt])
 
       }
       pp <- (sum(t(delta) %*% prods[[length(prods)]]))
@@ -255,309 +323,185 @@ test_f <- function(parms){
       id_cnt <- id_cnt + 1
     }
   }
+  nll2 <- nll2 - sum(RTMB::dnorm(phi_re,0,exp(sig),log = TRUE))
+  nll2 <- nll2 - sum(RTMB::dnorm(p_re,0,exp(sig),log = TRUE))
 
-    rel_site <- unique(data$ReleaseSite)
-    #Predicted survival
-    gamma_pred <- array(0,dim = c(ns,ns, length(levels(data$loc)), length(rel_site)),
-                        dimnames = list(next_state = levels(state),
-                                        current_state = levels(state),
-                                        Locations = levels(data$loc),
-                                        rel_site = rel_site
-                        ))
-    cum_gamma_pred <- array(1,dim = c(ns,ns, length(levels(data$loc)), length(rel_site)),
-                        dimnames = list(next_state = levels(state),
-                                        current_state = levels(state),
-                                        Locations = levels(data$loc),
-                                        rel_site = rel_site
-                        ))
-
-    icnt <- 1
-    pred_x <- rep(0,nrow(MR_settings$dm$pred_m))
-    cum_pred_x <- rep(1,nrow(MR_settings$dm$pred_m))
-    for(i in 1:length(pred_x)){
-      cur_s <- as.integer(MR_settings$pred_data$current_state[i])
-      next_s <- as.integer(MR_settings$pred_data$next_state[i])
-      if(next_s<cur_s){
-        pred_x[i] <- 0
-      }
-      if(cur_s<=next_s){
-        pred_x[i] <- MR_settings$dm$pred_m[i,] %*% phi_s[[s]]
-      }
-      if(next_s==ns){
-        pred_x[i] <- 1
-      }
-    }
-
-    for(site in levels(MR_settings$pred_data$ReleaseSite)){
-      lcnt <- 1
-      for(loc in levels(MR_settings$pred_data$loc)){
-        for(cur_s in levels(MR_settings$pred_data$current_state)){
-
-          next_states <- pred_x[MR_settings$pred_data$ReleaseSite == site &
-                                  MR_settings$pred_data$loc == loc &
-                                  MR_settings$pred_data$current_state == cur_s &
-                                  as.integer(MR_settings$pred_data$current_state) <= as.integer(MR_settings$pred_data$next_state)]
-
-
-          pred_x[MR_settings$pred_data$ReleaseSite == site &
-                   MR_settings$pred_data$loc == loc &
-                   MR_settings$pred_data$current_state == cur_s &
-                   as.integer(MR_settings$pred_data$current_state) <= as.integer(MR_settings$pred_data$next_state)] <- exp(next_states)/sum(exp(next_states))
-
-          # tmp_cum <- pred_x[MR_settings$pred_data$ReleaseSite == site &
-          #                                 MR_settings$pred_data$loc == loc &
-          #                                 MR_settings$pred_data$current_state == cur_s &
-          #                                 MR_settings$pred_data$next_state == levels(MR_settings$pred_data$next_state)[1]]
-
-          if(loc ==levels(MR_settings$pred_data$loc)[1]){
-            cum_pred_x[MR_settings$pred_data$ReleaseSite == site &
-                       MR_settings$pred_data$loc == loc &
-                       MR_settings$pred_data$current_state == cur_s &
-                       MR_settings$pred_data$next_state == cur_s] <- pred_x[MR_settings$pred_data$ReleaseSite == site &
-                                                                          MR_settings$pred_data$loc == loc &
-                                                                          MR_settings$pred_data$current_state == cur_s &
-                                                                          MR_settings$pred_data$next_state == cur_s]
-          }
-        }
-
-        if(loc !=levels(MR_settings$pred_data$loc)[1]){
-          for(s in levels(MR_settings$pred_data$next_state)[1]){
-            cum_pred_x[MR_settings$pred_data$ReleaseSite == site &
-                           MR_settings$pred_data$loc == loc &
-                           MR_settings$pred_data$current_state == s &
-                           MR_settings$pred_data$next_state == s] <- pred_x[MR_settings$pred_data$ReleaseSite == site &
-                                                                                          MR_settings$pred_data$loc == loc &
-                                                                                          MR_settings$pred_data$current_state == s &
-                                                                                          MR_settings$pred_data$next_state == s] *
-              cum_pred_x[MR_settings$pred_data$ReleaseSite == site &
-                       MR_settings$pred_data$loc == levels(MR_settings$pred_data$loc)[lcnt - 1] &
-                       MR_settings$pred_data$current_state == s &
-                       MR_settings$pred_data$next_state == s]
-
-
-
-          }
-        }
-        lcnt <- lcnt + 1
-      }
-    }
-
-    cum_pred_x <- RTMB::qlogis(cum_pred_x)
-
-  #   for(i in 1:length(pred_x)){
-  #     cur_s <- MR_settings$pred_data$current_state[i]
-  #     next_s <- MR_settings$pred_data$next_state[i]
-  #     loc <- MR_settings$pred_data$loc[i]
-  #     init_loc <- MR_settings$pred_data$tag_site[i]
+  #Print the prediction model
+  # if(length(MR_settings$pred_dm$phi)>0){
+  #   pred_gamma <- MR_settings$pred_dm$phi[[1]]$X %*% phi_s[[1]]
+  #   if(phi_re_dim[[1]]>0){
+  #     pred_gamma <- pred_gamma + t(MR_settings$pred_dm$phi[[1]]$reTrms$Zt) %*% phi_re_s[[1]]
   #   }
-  #
-  #
-    nj <- length(i_obs)
-    icnt <- 1
-    for(i in 1:nrow(MR_settings$dm$pred_m)){
-      site <- as.integer(MR_settings$pred_data$ReleaseSite[i])
-      loc <- as.integer(MR_settings$pred_data$loc[i])
-      cur_s <- as.integer(MR_settings$pred_data$current_state[i])
-      next_s <- as.integer(MR_settings$pred_data$next_state[i])
-      # for(j in 2:(nj-1)){
-      #   for(s in 1:(ns-1)){
-      if(next_s<cur_s){
-        gamma_pred[cur_s,next_s,loc,site] <- MR_settings$dm$pred_m[i,] %*% phi_s[[s]]
-        # icnt <- icnt + 1
-      }
-      if(next_s==ns){
-        gamma_pred[cur_s,next_s,loc,site] <- 1
-        # icnt <- icnt + 1
-      }
-        # for(s in 1:(ns-1)){
-        #   gamma_pred[next_s,cur_s:ns,j,site] <- exp((gamma_pred[s,s:ns,j,site]))/sum(exp((gamma_pred[s,s:ns,j,site])))
-        #   cum_gamma_pred[next_s,cur_s:ns,j,site] <- cum_gamma_pred[s,s:ns,j-1,site] * gamma_pred[s,s:ns,j,site]
-        # }
-      }
-      #Last location
-      # gamma_pred[s,s,nj,site] <- lam_s[[s]][site]
-      # gamma_pred[1:ns,ns,nj,site] <- 1
-      # for(s in 1:(ns-1)){
-      #   gamma_pred[s,s:ns,nj,site] <- exp((gamma_pred[s,s:ns,nj,site]))/sum(exp((gamma_pred[s,s:ns,nj,site])))
-      # }
-    # }
+  #   pred_gamma <- exp(pred_gamma)/sum(exp(1) + exp(pred_gamma))
+  #   RTMB::REPORT(pred_gamma)
   # }
 
-  # pred_est <-  MR_settings$dm$pred_m %*% phi_s[[s]]
-  # for(i in unique(MR_settings$pred_data$id)){
-  #   for(j in unique(MR_settings$pred_data$current_state)){
-  #     est <- rep(0,ns)
-  #     cum_est <- rep(0,ns)
-  #     jcnt <- 1
-  #     for(j2 in unique(MR_settings$pred_data$next_state)){
-  #       if(j2 == "unk"){
-  #         est[jcnt] <- 1
-  #       }else{
-  #         est[jcnt] <- pred_est[MR_settings$pred_data$id == i & MR_settings$pred_data$current_state == j & MR_settings$pred_data$next_state == j2, ]
-  #       }
-  #       jcnt <- jcnt + 1
-  #     }
-  #     pred_est[MR_settings$pred_data$id == i & MR_settings$pred_data$current_state == j] <- exp(est)/sum(exp(est))
-  #   }
-  # }
-  # for(i in unique(MR_settings$pred_data$id)){
-  #       for(j in unique(MR_settings$pred_data$current_state)){
-  #         pred_est[MR_settings$pred_data$id == i &
-  #                    MR_settings$pred_data$loc == unique(MR_settings$pred_data$loc)[1] &
-  #                    MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j] &
-  #                    MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j]] <-
-  #           for(l in 2:length(unique(MR_settings$pred_data$loc))){
-  #             # pred_est[MR_settings$pred_data$id == i &
-  #       #            MR_settings$pred_data$loc == l &
-  #       #            MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j] &
-  #       #            MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j]] <-
-  #       #   pred_est[MR_settings$pred_data$id == i &
-  #       #              MR_settings$pred_data$loc == l &
-  #       #              MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j-1]] *
-  #       #   pred_est[MR_settings$pred_data$id == i &
-  #       #              MR_settings$pred_data$loc == l &
-  #       #              MR_settings$pred_data$current_state == unique(MR_settings$pred_data$current_state)[j-1]] *
-  #       }
-  #   }
-  # }
-  gamma_pred <- RTMB::qlogis(gamma_pred)
-  cum_gamma_pred <- RTMB::qlogis(cum_gamma_pred)
+  RTMB::REPORT(ii)
+  RTMB::REPORT(id_cnt)
+  RTMB::REPORT(ii)
 
   RTMB::REPORT(phi)
   RTMB::REPORT(phi_s)
   RTMB::REPORT(p)
+  RTMB::REPORT(p_s)
+  RTMB::REPORT(phi_re_s)
+  RTMB::REPORT(p_re_s)
   RTMB::REPORT(eta)
   RTMB::REPORT(lam)
+  RTMB::REPORT(lam_s)
   RTMB::REPORT(gamma)
-  RTMB::REPORT(pred_x)
-  RTMB::REPORT(gamma_pred)
-  RTMB::REPORT(cum_gamma_pred)
-  # RTMB::REPORT(pred_est)
-  RTMB::REPORT(cum_pred_x)
   RTMB::REPORT(omega)
   RTMB::REPORT(nll2)
-  # RTMB::ADREPORT(pred_est)
-  RTMB::ADREPORT(cum_pred_x)
+  if(MR_settings$mod=="CJS"){
+    RTMB::REPORT(phi_tmp)
+    RTMB::REPORT(p_tmp)
+  }
   return(nll2)
 }
 
 
-create_design_matrices <- function(settings, data){
+create_design_matrices <- function(settings, data) {
   dm <- list()
-  phi_m <- list()
-  pred_m <- list()
-  eta_m <- list()
-  lam_m <- list()
-  p_m <- list()
+  pred_dm <- list()
 
-  for(i in c("yr")){
-    tmp_WEN <- data %>%
-      mutate(state = ifelse(is.na(stage),"unk","yr")) %>%
-      mutate(state = factor(state, levels = c("yr","unk"))) %>%
-      mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      droplevels() %>%
-      # mutate(state = !!i) %>%
-      mutate(tag_site = "Trib",
-             last_site = last_site) %>%
-      filter(loc != tag_site,
-             loc != last_site) %>%
-      droplevels()
+  #What is that state column in the original data
+  state <- settings$state #model state from MR_settings
 
+  #Get rid of the last state
+  states <- unique(data$state)
+  states <- states[states != "unk"]
 
-    #For each state
-    phi_m[[i]] <-  unlist(tryCatch(Matrix::sparse.model.matrix(formula(MR_settings$frm$phi), tmp_WEN),
-                                   error = function(e) e,
-                                   warning = function(w) w))
+  # Helper function for generating design matrices
+  generate_design_matrix <- function(formula_list, data_subset, model_type) {
+    design_matrices <- list()
+    pred_matrices <- list()
+    reTrms <- list()
 
-    names_phi <- colnames(phi_m[[i]])
+    for (i in seq_along(states)) { #Removed the last state ("unk")
+      if(length(formula_list)==1){
+        pi <- 1
+      }else{
+        pi <- i
+      }
+      current_formula <- formula_list[[pi]]
+      tmp_data <- data_subset()
 
-    pred_data <- MR_settings$pred_data %>%
-      mutate(tag_site = "Trib", last_site = locs[length(locs)]) %>%
-      filter(loc != tag_site & loc != last_site)
+      tryCatch({
+        if(attr(gregexpr("\\|",current_formula)[[1]],"match.length")>0){
+          lF <- lme4::lFormula(formula(paste(state,current_formula)), tmp_data)
+          design_matrices[[i]] <- lF
+        }else{
+          design_matrices[[i]] <- list()
+          design_matrices[[i]]$X <- model.matrix(formula(current_formula), tmp_data)
+          design_matrices[[i]]$reTrms <- list()
+          design_matrices[[i]]$fr <- tmp_data
+        }
 
-    pred_m[[i]] <-  unlist(tryCatch(Matrix::sparse.model.matrix(formula(MR_settings$frm$phi), pred_data),
-                                    error = function(e) e,
-                                    warning = function(w) w))
-    names_pred <- colnames(pred_m[[i]])
-
-    pred_m <- pred_m[[i]][,names_pred %in% names_phi]
-
-  }
-  MR_settings$pred_data <- pred_data
-  dm$phi <- phi_m
-  dm$pred_m <- pred_m
-
-  for(i in c("yr")){
-    tmp_WEN <- data %>%
-      mutate(state = ifelse(is.na(stage),"unk","yr")) %>%
-      mutate(state = factor(state, levels = c("yr","unk"))) %>%
-      mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      # mutate(loc_phi = factor(loc, levels = c("Trib","First_Trap","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      droplevels() %>%
-      # mutate(state = !!i) %>%
-      mutate(tag_site = "Trib",
-             last_site = last_site) %>%
-      filter(loc != tag_site,
-             loc != last_site) %>%
-      droplevels()
-
-
-    #For each state
-    p_m[[i]] <-  unlist(tryCatch(Matrix::sparse.model.matrix(formula(MR_settings$frm$p), tmp_WEN),
-                                 error = function(e) e,
-                                 warning = function(w) w))
-
+      }, error = function(e) {
+        design_matrices[[i]] <- NULL
+        # pred_matrices[[i]] <- NULL
+      })
+    }
+    list(design = design_matrices)
 
   }
-  dm$p <- p_m
 
-  for(i in c("yr")){
-    tmp_WEN <- data %>%
-      mutate(state = ifelse(is.na(stage),"unk","yr")) %>%
-      mutate(state = factor(state, levels = c("yr","unk"))) %>%
-      mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      # mutate(loc_phi = factor(loc, levels = c("Trib","First_Trap","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      droplevels() %>%
-      # mutate(state = !!i) %>%
-      mutate(tag_site = "Trib",
-             last_site = last_site) %>%
+  # Generate design matrices for phi
+  phi_data_fn <- function() {
+    data %>%
+      mutate(tag_site = init_site, last_site = last_site) %>%
+      filter(loc != tag_site & loc != last_site) %>%
+      droplevels()
+  }
+  phi_matrices <- generate_design_matrix(settings$frm$phi, phi_data_fn, "phi")
+  dm$phi <- phi_matrices$design
+
+  # Generate design matrices for p
+  p_data_fn <- function() {
+    data %>%
+      mutate(tag_site = init_site, last_site = last_site) %>%
+      filter(loc != tag_site & loc != last_site) %>%
+      droplevels()
+  }
+  p_matrices <- generate_design_matrix(settings$frm$p, p_data_fn, "p")
+  dm$p <- p_matrices$design
+
+  # Generate design matrices for lam
+  lam_data_fn <- function() {
+    data %>%
+      mutate(tag_site = init_site, last_site = last_site) %>%
       filter(loc == last_site) %>%
       droplevels()
-
-
-    #For each state
-    lam_m[[i]] <-  unlist(tryCatch(Matrix::sparse.model.matrix(formula(MR_settings$frm$lam), tmp_WEN),
-                                   error = function(e) e,
-                                   warning = function(w) w))
-
-
   }
-  dm$lam <- lam_m
+  lam_matrices <- generate_design_matrix(settings$frm$lam, lam_data_fn, "lam")
+  dm$lam <- lam_matrices$design
 
-  for(i in c("sub")){
-    tmp_WEN <- data %>%
-      mutate(state = ifelse(is.na(stage), "unk", stage)) %>%
-      mutate(state = factor(state, levels = c("yr","unk"))) %>%
-      mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA", "WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      mutate(loc_eta = case_when(
-        i == "sub" & loc %in% c("Wen","MCJ","JDJ", "BON") ~ "Wen",
-        i == "sub" ~ as.character(loc)
-      )) %>%
-      mutate(loc_eta = factor(loc_eta, levels = c("Trib","First_Trap","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-      droplevels() %>%
-      mutate(state = !!i) %>%
-      mutate(tag_site = "Trib",
-             last_site = locs[length(locs)])
-
-    tmp_WEN <- tmp_WEN[tmp_WEN$loc!=tmp_WEN$tag_site &
-                         tmp_WEN$loc!=tmp_WEN$last_site,] %>%
+  # Generate design matrices for eta
+  eta_data_fn <- function() {
+    data %>%
+      mutate(
+        loc = factor(loc, levels = locs),
+        tag_site = init_site,
+        last_site = locs[length(locs)]
+      ) %>%
+      filter(loc != last_site) %>%
       droplevels()
-
-    eta_m[[i]] <-  tryCatch(Matrix::sparse.model.matrix(formula('state ~ loc_eta'), tmp_WEN),
-                            error = function(e) e,
-                            warning = function(w) w)
   }
- dm$eta <- eta_m
-
- return(dm)
+  eta_matrices <- generate_design_matrix(settings$frm$eta, eta_data_fn, "eta")
+  dm$eta <- eta_matrices$design  # Only one formula for eta
+  return(list(dm = dm, data = data))
 }
+
+prediction_grid <- function(dm,
+                            raw,
+                            frm){
+
+  # Columns to expand
+  states <- factor(unique(raw$state), levels = levels(raw$state))
+  #Get the fixed terms
+  re_length <- length(dm$reTrms)
+  if(re_length>1){
+    terms <- names(dm$fr)
+  }else{
+    fixed_terms <- attr(terms(frm), "term.labels")
+  }
+
+  #Because the original data may not contain all of the unique combinations for the factors,
+  #espcially if you have and interaction term (factor1:factor2)
+  #in the fixed or random effects
+  pred_data_fn <- function() {
+    raw %>%
+      mutate(tag_site = init_site, last_site = last_site) %>%
+      filter(loc != tag_site & loc != last_site) %>% #remove the first and last locations
+      droplevels()
+  }
+
+  unique_outcomes <- pred_data_fn() %>%
+    mutate(
+      pattern = apply(select(., all_of(terms)), 1, paste, collapse = "\t")
+    ) %>%
+    group_by(pattern) %>%
+    summarise(
+      count = n(),
+      .groups = 'drop'  # Optional, ungroup after summarizing
+    )
+
+  # Expand.grid on the selected columns
+  expanded_grid <- do.call(expand.grid, lapply(raw[c("loc",terms)], unique)) %>%
+    mutate(
+      pattern = apply(select(., all_of(terms)), 1, paste, collapse = "\t")
+    ) %>%
+    filter(pattern %in% unique_outcomes$pattern) %>%
+    group_by(across(-c(state,pattern))) %>%
+    mutate(
+      unique_id = cur_group_id()  # Assigns a unique ID to each group
+    ) %>%
+    ungroup() %>%
+    droplevels()
+
+  return(expanded_grid)
+
+}
+
+
+

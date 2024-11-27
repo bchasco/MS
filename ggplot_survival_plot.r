@@ -29,7 +29,7 @@ p <- as.data.frame(surv) %>%
   geom_errorbar(aes(ymin = plogis(value - 1.96 * sd), ymax = plogis(value + 1.96 * sd)),
                 position = position_dodge(width = 0.5), width = 0.25) +
     theme_classic() +
-  xlab("Detection location") +
+  xlab("Survival") +
   theme(text = element_text(size = 16)) +
   ylim(0,1)
 
