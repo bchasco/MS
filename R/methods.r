@@ -25,23 +25,19 @@ setGeneric("MStmb", function(object) standardGeneric("MStmb"))
 # Method building and runnning the tmb model
 setMethod("MStmb", "tmb_list", function(object) {
 
-  # object@MR_settings$pred_data <- pred.grid(data = object@data)
-
   design_matrices <- create_design_matrices(object@MR_settings, object@data)
-  object@MR_settings$dm <- design_matrices$dm
-  object@MR_settings$pred_dm <- design_matrices$pred_dm
+  poly_basis <- create_poly_basis(object)
 
 
   tmb.data <<- list()
-
-  tmb.data[['data']] <<- object@data #%>%
-    # mutate(state = ifelse(is.na(stage), "unk", "yr")) %>%
-    # mutate(state = factor(state, levels = c("yr","unk"))) %>%
-    # mutate(loc = factor(loc, levels = c("Trib","First_Trap","RIS_RIA","WEN","MCJ","JDJ","BON","TWX_EST"))) %>%
-    # droplevels()
-
-
+  tmb.data[['data']] <<- object@data
+  object@MR_settings$dm <- design_matrices$dm
   tmb.data[['dm']] <<- object@MR_settings$dm
+
+  # pred_grid <- create_expanded_grid(object)
+  # pred_matrices <- create_pred_matrices(object, poly_basis, pred_grid)
+  # tmb.data[['pred']] <<- pred_matrices
+  # tmb.data[['pred.grid']] <<- pred_grid
 
   #You are going to have multiple recaptures
   #You have to create a state transition matrix for each recapture
@@ -110,19 +106,25 @@ setMethod("MStmb", "tmb_list", function(object) {
 
   tmb.data$MR_settings <<- object@MR_settings
 
-  parameters <<- list(phi = rep(0 , sum(unlist(phi_dim))),
+  parameters <<- list(phi = rep(-3 , sum(unlist(phi_dim))),
                       phi_re = rep(0 , sum(unlist(phi_re_dim))),
-                     p = rep(0 , sum(unlist(p_dim))),
+                     p = rep(-2, sum(unlist(p_dim))),
                      p_re = rep(0 , sum(unlist(p_re_dim))),
-                     lam = rep(0 , sum(unlist(lam_dim))),
+                     lam = rep(-2, sum(unlist(lam_dim))),
                      eta = rep(0 , sum(unlist(eta_dim))),
                      sig = 0)
+
+  if(object@MR_settings$mod == "MSt"){
+    parameters$tau <<- rep(0, length(unique(tmb.data$data$loc)) - 1)
+    parameters$fsig_tau <<- rep(0, length(unique(tmb.data$data$loc)) - 1)
+  }
 
   environment(test_f) <- .GlobalEnv
 
   obj <- RTMB::MakeADFun(test_f,
                          parameters,
                          silent = FALSE,
+                         # map = list(sig = as.factor(NA)),
                          random = c("phi_re", "p_re"))
   #
   object@TMB$obj <- obj
