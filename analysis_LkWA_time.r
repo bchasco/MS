@@ -1,10 +1,10 @@
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-# rm(list = ls())
-load("data/LkWA_time.rda")
+rm(list = ls())
+# load("data/LkWA_time.rda")
 #
-# load("data/LkWA_length.rda")
+load("data/LkWA_time_releasewk_length.rda")
 
 
 init_site = "tag"
@@ -19,23 +19,23 @@ LkWA <- LkWA %>%
   mutate(fY = factor(Year, levels = sort(unique(Year)))) %>%
   mutate(fSp = ifelse(Species == "1", "Chinook", "Coho")) %>%
   mutate(fSp = factor(fSp, levels = c("Chinook", "Coho"))) %>%
-  # mutate(wk = as.numeric(as.factor(ReleaseWeek)) ) %>%
+  mutate(wk = as.numeric(as.factor(ReleaseWeek)) ) %>%
   # mutate(fwk = factor(wk, levels = sort(unique(wk)))) %>%
-  # mutate(Length = as.numeric(as.character(Length))) %>%
+  mutate(Length = as.numeric(as.character(Length))) %>%
   mutate(Year = as.numeric(as.character(Year))) %>%
-  # filter(Length < 150 & Length > 70) %>%
-  filter(Year < 2022, Year >= 2015) %>%
+  filter(Length < 150 & Length > 70) %>%
+  filter(Year < 2022 & Year > 2016) %>%
   filter(fSp == "Chinook") %>%
-  filter(ReleaseSite %in% c("LWCEDR","LWBEAR")) %>%
-  # filter(!is.na(Length)) %>%
+  filter(ReleaseSite %in% c("LWCEDR")) %>%
+  filter(!is.na(Length)) %>%
   droplevels()
 
 
 MR_settings <- list(state = 'state',
                     frms = list(
-                                phi = list(yr = ' ~ -1 + ReleaseSite + (1|fY)'), #survival
-                                p = list(yr = ' ~ 1 + (1|fY)'), #detection probability
-                                lam = list(yr = ' ~ -1 + fY'), #nuisance parameter
+                                phi = list(yr = ' ~ 1 + (1|fY)'), #survival
+                                p = list(yr = ' ~ 1 '), #detection probability
+                                lam = list(yr = ' ~ 1'), #nuisance parameter
                                 eta = list(yr = ' ~ -1')), #transition probability
                     mod = "MSt")
 
@@ -46,12 +46,5 @@ input <- new("tmb_list",
                    data = LkWA)
 
 #take the input and put it into a tmb model
-fit <- MStmb(input)
-
-# Assuming `fit@TMB$opt$par` is your named vector
-params <- fit@TMB$opt$par
-
-# Split the vector into a list by names
-grouped_params <- split(params, names(params))
-
+fit_t <- MStmb(input)
 

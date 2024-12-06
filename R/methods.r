@@ -25,19 +25,26 @@ setGeneric("MStmb", function(object) standardGeneric("MStmb"))
 # Method building and runnning the tmb model
 setMethod("MStmb", "tmb_list", function(object) {
 
+  tmb.data <<- list()
+
   design_matrices <- create_design_matrices(object@MR_settings, object@data)
   poly_basis <- create_poly_basis(object)
 
-
-  tmb.data <<- list()
   tmb.data[['data']] <<- object@data
   object@MR_settings$dm <- design_matrices$dm
   tmb.data[['dm']] <<- object@MR_settings$dm
 
-  # pred_grid <- create_expanded_grid(object)
-  # pred_matrices <- create_pred_matrices(object, poly_basis, pred_grid)
-  # tmb.data[['pred']] <<- pred_matrices
-  # tmb.data[['pred.grid']] <<- pred_grid
+  # print(names(object@MR_settings))
+  pred_grid <<- expanded_result <- expand_grid(
+    data = object@data,
+    cols = extract_unique_vars(object@MR_settings$frms),
+    include_time = object@MR_settings$mod=="MSt"
+  )
+  # print(pred_grid)
+  #
+  pred_matrices <- create_pred_matrices(object, poly_basis, pred_grid)
+  tmb.data[['pred']] <<- pred_matrices
+  tmb.data[['pred.grid']] <<- pred_grid
 
   #You are going to have multiple recaptures
   #You have to create a state transition matrix for each recapture
@@ -51,15 +58,18 @@ setMethod("MStmb", "tmb_list", function(object) {
 
   phi_dim <- list()
   phi_re_dim <- list()
+  phi_re_sig <- list()
+
   phi_states <- length(tmb.data[['dm']][['phi']])
   for(i in 1:phi_states){
     if(length(object@MR_settings$frms$phi)>1){
       phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[i]]$X)
     }else{
-      phi_dim[[1]] <- ncol(tmb.data[['dm']][['phi']][[1]]$X)
+      phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[1]]$X)
     }
     if(length(tmb.data[['dm']][['phi']][[i]][['reTrms']])>0){
       phi_re_dim[[i]] <- sum(tmb.data[['dm']][['phi']][[i]][['reTrms']]$nl)
+      phi_re_sig[[i]] <- length(unique(tmb.data[['dm']][['phi']][[i]][['reTrms']]$Lind))
     }else{
       phi_re_dim[[i]] <- 0
     }
@@ -69,15 +79,17 @@ setMethod("MStmb", "tmb_list", function(object) {
 
   p_dim <- list()
   p_re_dim <- list()
+  p_re_sig <- list()
   p_states <- length(tmb.data[['dm']][['p']])
   for(i in 1:p_states){
     if(length(object@MR_settings$frms$p)>1){
       p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[i]]$X)
     }else{
-      p_dim[[1]] <- ncol(tmb.data[['dm']][['p']][[1]]$X)
+      p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[1]]$X)
     }
     if(length(tmb.data[['dm']][['p']][[i]][['reTrms']])>0){
       p_re_dim[[i]] <- sum(tmb.data[['dm']][['p']][[i]][['reTrms']]$nl)
+      p_re_sig[[i]] <- length(unique(tmb.data[['dm']][['p']][[i]][['reTrms']]$Lind))
     }else{
       p_re_dim[[i]] <- 0
     }
@@ -86,15 +98,24 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data[['p_re_dim']] <<- p_re_dim
 
   lam_dim <- list()
+  lam_re_dim <- list()
+  lam_re_sig <- list()
   lam_states <- length(tmb.data[['dm']][['lam']])
   for(i in 1:lam_states){
     if(length(object@MR_settings$frms$lam)>1){
       lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[i]]$X)
     }else{
-      lam_dim[[1]] <- ncol(tmb.data[['dm']][['lam']][[1]]$X)
+      lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[1]]$X)
+    }
+    if(length(tmb.data[['dm']][['lam']][[i]][['reTrms']])>0){
+      lam_re_dim[[i]] <- sum(tmb.data[['dm']][['lam']][[i]][['reTrms']]$nl)
+      lam_re_sig[[i]] <- length(unique(tmb.data[['dm']][['lam']][[i]][['reTrms']]$Lind))
+    }else{
+      lam_re_dim[[i]] <- 0
     }
   }
   tmb.data[['lam_dim']] <<- lam_dim
+  tmb.data[['lam_re_dim']] <<- lam_re_dim
 
   eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x$X)})
   eta_dim <- eta_dim[1]
@@ -106,17 +127,20 @@ setMethod("MStmb", "tmb_list", function(object) {
 
   tmb.data$MR_settings <<- object@MR_settings
 
-  parameters <<- list(phi = rep(-3 , sum(unlist(phi_dim))),
+  parameters <<- list(phi = rep(-0.04 , sum(unlist(phi_dim))),
                       phi_re = rep(0 , sum(unlist(phi_re_dim))),
-                     p = rep(-2, sum(unlist(p_dim))),
-                     p_re = rep(0 , sum(unlist(p_re_dim))),
-                     lam = rep(-2, sum(unlist(lam_dim))),
-                     eta = rep(0 , sum(unlist(eta_dim))),
-                     sig = 0)
+                      phi_re_sig = rep(0 , sum(unlist(phi_re_sig))),
+                      p = rep(-0.4, sum(unlist(p_dim))),
+                      p_re = rep(0 , sum(unlist(p_re_dim))),
+                      p_re_sig = rep(0 , sum(unlist(p_re_sig))),
+                      lam = rep(-3, sum(unlist(lam_dim))),
+                      lam_re = rep(0 , sum(unlist(lam_re_dim))),
+                      lam_re_sig = rep(0 , sum(unlist(lam_re_sig))),
+                      eta = rep(0 , sum(unlist(eta_dim))),
+                      tau = rep(0, length(unique(tmb.data$data$loc)) - 1),
+                      fsig_tau = rep(0, length(unique(tmb.data$data$loc)) - 1))
 
   if(object@MR_settings$mod == "MSt"){
-    parameters$tau <<- rep(0, length(unique(tmb.data$data$loc)) - 1)
-    parameters$fsig_tau <<- rep(0, length(unique(tmb.data$data$loc)) - 1)
   }
 
   environment(test_f) <- .GlobalEnv
@@ -125,7 +149,7 @@ setMethod("MStmb", "tmb_list", function(object) {
                          parameters,
                          silent = FALSE,
                          # map = list(sig = as.factor(NA)),
-                         random = c("phi_re", "p_re"))
+                         random = c("phi_re", "p_re","lam_re"))
   #
   object@TMB$obj <- obj
   object@TMB$obj$tmb.data <- tmb.data

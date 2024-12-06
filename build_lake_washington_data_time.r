@@ -1,9 +1,19 @@
-myvars <- c("ReleaseSite","loc","state","Species","Year", "travel.days","adult.days")
+myvars <- c("ReleaseSite","loc","state","Species","Year", "ReleaseWeek", "Length","travel.days","adult.days")
 x <- read.csv("data/combinedData.csv") %>%
-  mutate(tag = 1,
-         Length = round(Length/5)*5,
-         travels.days = round(as.numeric(as.character(travel.days))/7),
-         adult.days = round(as.numeric(as.character(adult.days))/7)) %>%
+  mutate(
+    tag = 1,
+    Length = round(Length / 5) * 5,
+    travel.days = if_else(
+      !is.na(travel.days) & travel.days != "",
+      ceiling(as.numeric(as.character(travel.days)) / 7),
+      NA_real_
+    ),
+    adult.days = if_else(
+      !is.na(adult.days) & adult.days != "",
+      ceiling(as.numeric(as.character(adult.days)) / 7),
+      NA_real_
+    )
+  ) %>%
   pivot_longer(cols = c(tag,as.Smolt,As.Adult.ballard), names_to = "loc", values_to = "state") %>%
   group_by(PITCode) %>%
   summarise(
@@ -69,4 +79,4 @@ LkWA <- LkWA %>%
   mutate(time = na_if(time, "#N/A"))# %>%
 # filter(!is.na(days))
 
-save(LkWA, file="data/LkWA_time.rda")
+# save(LkWA, file="data/LkWA_time_releasewk_length.rda")
