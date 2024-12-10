@@ -35,9 +35,12 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data[['dm']] <<- object@MR_settings$dm
 
   # print(names(object@MR_settings))
+  unique_cols <- extract_unique_vars(object@MR_settings$frms)
+  unique_cols <- unique_cols[!(unique_cols%in%c("loc"))] #Need this because you add a time formula that may include location
+
   pred_grid <<- expanded_result <- expand_grid(
     data = object@data,
-    cols = extract_unique_vars(object@MR_settings$frms),
+    cols = unique_cols,
     include_time = object@MR_settings$mod=="MSt"
   )
   # print(pred_grid)

@@ -423,7 +423,7 @@ test_f <- function(parms){
 
   nll2 <- nll2 - sum(RTMB::dnorm(lam_re_s[[1]],
                                  0,
-                                 exp(lam_re_sig[dm$p[[1]]$reTrms$Lind]),
+                                 exp(lam_re_sig[dm$lam[[1]]$reTrms$Lind]),
                                  log = TRUE))
 
   pd <- tmb.data$pred.grid
@@ -625,7 +625,24 @@ create_design_matrices <- function(settings, data) {
   }
   eta_matrices <- generate_design_matrix(settings$frm$eta, eta_data_fn, "eta")
   dm$eta <- eta_matrices$design  # Only one formula for eta
+
+
+  # Generate design matrices for eta
+  time_data_fn <- function() {
+    data %>%
+      mutate(
+        loc = factor(loc, levels = locs),
+        tag_site = init_site,
+        last_site = locs[length(locs)]
+      ) %>%
+      filter(loc != tag_site) %>%
+      droplevels()
+  }
+  time_matrices <- generate_design_matrix(settings$frm$time, time_data_fn, "time")
+  dm$time <- time_matrices$design  # Only one formula for eta
+
   return(list(dm = dm, data = data))
+
 }
 
 create_pred_matrices <- function(object, basis, new_grid) {
@@ -661,8 +678,8 @@ create_pred_matrices <- function(object, basis, new_grid) {
       # print(attr(gregexpr("\\|",current_formula)[[1]],"useBytes"))
 
       tryCatch({
-        if(attr(gregexpr("\\|",current_formula)[[1]],"match.length")>0){
-          # print(paste(model_type,"lF"))
+        if(max(attr(gregexpr("\\|",current_formula)[[1]],"match.length"))>0){
+          print(paste(model_type,"lF"))
             lF <- lme4::lFormula(formula(paste(state,current_formula)), tmp_data)
             design_matrices[[i]] <- lF
 
@@ -744,5 +761,20 @@ create_pred_matrices <- function(object, basis, new_grid) {
   }
   eta_matrices <- generate_design_matrix(object@MR_settings$frm$eta, eta_data_fn, "eta", basis)
   dm$eta <- eta_matrices$design  # Only one formula for eta
+
+  # Generate design matrices for eta
+  time_data_fn <- function() {
+    new_grid %>%
+      mutate(
+        loc = factor(loc, levels = locs),
+        tag_site = init_site,
+        last_site = locs[length(locs)]
+      ) %>%
+      filter(loc != tag_site) %>%
+      droplevels()
+  }
+  time_matrices <- generate_design_matrix(object@MR_settings$frm$time, time_data_fn, "time", basis)
+  dm$time <- time_matrices$design  # Only one formula for eta
+
   return(list(dm = dm))
 }

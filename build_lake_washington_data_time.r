@@ -1,4 +1,4 @@
-myvars <- c("ReleaseSite","loc","state","Species","Year", "ReleaseWeek", "Length","travel.days","adult.days")
+myvars <- c("ReleaseSite","loc","state","Species","Year", "ReleaseWeek", "travel.days","adult.days")
 x <- read.csv("data/combinedData.csv") %>%
   mutate(
     tag = 1,
@@ -79,4 +79,4 @@ LkWA <- LkWA %>%
   mutate(time = na_if(time, "#N/A"))# %>%
 # filter(!is.na(days))
 
-# save(LkWA, file="data/LkWA_time_releasewk_length.rda")
+save(LkWA, file="data/LkWA_time_releasewk.rda")
