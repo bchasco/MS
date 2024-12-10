@@ -128,6 +128,27 @@ setMethod("MStmb", "tmb_list", function(object) {
     tmb.data[['eta_dim']] <<- eta_dim
   }
 
+  tau_dim <- list()
+  tau_re_dim <- list()
+  tau_re_sig <- list()
+
+  tau_states <- length(tmb.data[['dm']][['tau']])
+  for(i in 1:tau_states){
+    if(length(object@MR_settings$frms$phi)>1){
+      tau_dim[[i]] <- ncol(tmb.data[['dm']][['tau']][[i]]$X)
+    }else{
+      tau_dim[[i]] <- ncol(tmb.data[['dm']][['tau']][[1]]$X)
+    }
+    if(length(tmb.data[['dm']][['tau']][[i]][['reTrms']])>0){
+      tau_re_dim[[i]] <- sum(tmb.data[['dm']][['tau']][[i]][['reTrms']]$nl)
+      tau_re_sig[[i]] <- length(unique(tmb.data[['dm']][['tau']][[i]][['reTrms']]$Lind))
+    }else{
+      tau_re_dim[[i]] <- 0
+    }
+  }
+  tmb.data[['tau_dim']] <<- tau_dim
+  tmb.data[['tau_re_dim']] <<- tau_re_dim
+
   tmb.data$MR_settings <<- object@MR_settings
 
   parameters <<- list(phi = rep(-0.04 , sum(unlist(phi_dim))),
@@ -140,11 +161,12 @@ setMethod("MStmb", "tmb_list", function(object) {
                       lam_re = rep(0 , sum(unlist(lam_re_dim))),
                       lam_re_sig = rep(0 , sum(unlist(lam_re_sig))),
                       eta = rep(0 , sum(unlist(eta_dim))),
-                      tau = rep(0, length(unique(tmb.data$data$loc)) - 1),
-                      fsig_tau = rep(0, length(unique(tmb.data$data$loc)) - 1))
+                      tau = rep(0, sum(unlist(tau_dim))),
+                      tau_sig = 0,
+                      tau_re = rep(0 , sum(unlist(tau_re_dim))),
+                      tau_re_sig = rep(0 , sum(unlist(tau_re_sig)))
+                      )
 
-  if(object@MR_settings$mod == "MSt"){
-  }
 
   environment(test_f) <- .GlobalEnv
 
@@ -152,7 +174,7 @@ setMethod("MStmb", "tmb_list", function(object) {
                          parameters,
                          silent = FALSE,
                          # map = list(sig = as.factor(NA)),
-                         random = c("phi_re", "p_re","lam_re"))
+                         random = c("phi_re", "p_re","lam_re","tau_re"))
   #
   object@TMB$obj <- obj
   object@TMB$obj$tmb.data <- tmb.data
