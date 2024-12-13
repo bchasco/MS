@@ -279,6 +279,16 @@ test_f <- function(parms){
 
   tau_pred <- rep(0,nrow(dm$tau[[1]]$X))
   tau_acc <- rep(0,nrow(dm$tau[[1]]$X))
+  data_tau <- rep(0,nrow(data))
+  data_est <- rep(0,nrow(data))
+  data_omega <- rep(0,nrow(data))
+  data_est_n <- rep(0,nrow(data))
+
+  #Probability outcomes
+  pp <- rep(0,length(unique(data$id)))
+  nn <- rep(0,length(unique(data$id)))
+
+  ij_cnt <- 1
 
   for(i in unique(data$id)){
     #fill the gamma matrix,
@@ -306,6 +316,8 @@ test_f <- function(parms){
       prods <- list(RTMB::diag(1, ns))
 
       # tau_acc <- 0
+      data_est[ij_cnt] <- 1
+      ij_cnt <- ij_cnt + 1
       for(j in (init_loc+1):length(i_obs)){
         # if(MR_settings$mod == "MSt"){
           if(j < length(i_obs)){
@@ -336,24 +348,16 @@ test_f <- function(parms){
               omega[s,s,j,id_cnt] <- -1. * exp(omega[s,s,j,id_cnt])
 
               if(ns>2 & s==1){
-                gamma[1,2,j,id_cnt] <- - 1. * (dm$eta[[1]]$X[eta_ii,] %*% eta)
+                gamma[1,2,j,id_cnt] <- (dm$eta[[1]]$X[eta_ii,] %*% eta)
+                gamma[1,1,j,id_cnt] <- gamma[1,1,j,id_cnt] + (dm$eta[[1]]$X[eta_ii,] %*% eta)
               }
-            }
-
-            if(j==2){
-              tau_acc[t_cnt] <- tau_pred[t_cnt]
-              if(!is.na(t_obs[j])){
-                nll2 <- nll2 - RTMB::dnorm(log(t_obs[j]), log(tau_pred[t_cnt]), exp(tau_sig), log = TRUE) * n_i
-              }
-            }
-            if(j>2 & j<length(i_obs)){
-
             }
 
             ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii
             eta_ii <- eta_ii + 1
           }
 
+          print(gamma[,,j,id_cnt])
           if(j == length(i_obs)){
             for(s in 1:(ns-1)){
               tau_pred[t_cnt] <- exp(t(dm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
@@ -374,43 +378,49 @@ test_f <- function(parms){
                 gamma[1,2,j,id_cnt] <- dm$eta[[1]]$X[eta_ii,] %*% eta
               }
             }
-            if(!is.na(t_obs[j])){
-              # tau_acc <- tau_pred[t_cnt] + tau_acc
-              nll2 <- nll2 - RTMB::dnorm(log(t_obs[j]), log(tau_pred[t_cnt]), exp(tau_sig), log = TRUE) * n_i
-              # tau_acc <- 0
-            }
+            # print(paste(id_cnt,j))
+            # print(t_obs)
             eta_ii <- eta_ii + 1
           }
 
-          for(s in 1:(ns-1)){
+        if(!is.na(t_obs[j])){
+          # print("timing like")
+          nll2 <- nll2 - RTMB::dnorm((t_obs[j]), (tau_pred[t_cnt]), exp(tau_sig), log = TRUE) * n_i
+        }
+
+        for(s in 1:(ns-1)){
             gamma[s,ns,j,id_cnt] <- -1 * sum(gamma[s,s:(ns-1),j,id_cnt])
             omega[s,ns,j,id_cnt] <- -1 * sum(omega[s,s:(ns-1),j,id_cnt])
           }
 
+          tmp_omega <- RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
           if(MR_settings$mod == "MSt"){
-            if(is.na(t_obs[j])){
-              prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
-                Matrix::expm((gamma[,,j,id_cnt]) * tau_pred[t_cnt]) %*%
-                RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
-            }else{
-              #This isn't correct for tau
+            tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]) * tau_pred[t_cnt])
             prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
-              Matrix::expm((gamma[,,j,id_cnt]) * tau_pred[t_cnt]) %*%
-              RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
-            }
+               tmp_gamma %*%
+              tmp_omega
           }else{
+            tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]))
             prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
-              Matrix::expm((gamma[,,j,id_cnt])) %*%
-              RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
+              tmp_gamma %*%
+              tmp_omega
           }
-        # }
+          data_est[ij_cnt] <- data_est[ij_cnt-1] * tmp_gamma[1,1]
+          data_omega[ij_cnt] <- tmp_omega[1,1]
+          data_est_n[ij_cnt] <- data_est[ij_cnt] * tmp_omega[1,1] * n_i
+          # }
+        data_tau[ij_cnt] <- tau_pred[t_cnt]
         t_cnt <- t_cnt + 1
+        ij_cnt <- ij_cnt + 1
       }
-      pp <- (sum(t(delta) %*% prods[[length(prods)]]))
-      nll2 <- nll2 - RTMB::dbinom(1,1,pp, log = TRUE) * n_i
+      pp[id_cnt] <- (sum(t(delta) %*% prods[[length(prods)]]))
+      nn[id_cnt] <- n_i
+      nll2 <- nll2 - RTMB::dbinom(1,1,pp[id_cnt], log = TRUE) * n_i
       id_cnt <- id_cnt + 1
     }
   }
+
+  print("test")
 
   nll2 <- nll2 - sum(RTMB::dnorm(phi_re_s[[1]],
                                  0,
@@ -466,9 +476,13 @@ test_f <- function(parms){
     for(j in (init_loc+1):length(i_obs)){
       if(j < length(i_obs)){
         for(s in 1:(ns-1)){
-          tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-          if(tau_re_dim[[s]]>0){
-            tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+          if(MR_settings$mod == "MSt"){
+            tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+            if(tau_re_dim[[s]]>0){
+              tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+            }
+          }else{
+            tau__pred[t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
           }
           if(phi_dim[[s]]>0){
             gamma_pred[s,s,j,id_cnt] <- exp(t(pdm$phi[[s]]$X[ii,]) %*% phi_s[[s]])
@@ -484,7 +498,7 @@ test_f <- function(parms){
           if(p_re_dim[[s]]>0){
             omega_pred[s,s,j,id_cnt] <- omega_pred[s,s,j,id_cnt] * exp(t(pdm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]])
           }
-          omega_pred[s,s,j,id_cnt] <- -1. * exp(omega_pred[s,s,j,id_cnt])
+          omega_pred[s,s,j,id_cnt] <- -1. * (omega_pred[s,s,j,id_cnt])
 
           if(ns>2 & s==1){
             gamma_pred[1,2,j,id_cnt] <- - 1. * (pdm$eta[[1]]$X[eta_ii,] %*% eta)
@@ -496,9 +510,13 @@ test_f <- function(parms){
 
       if(j == length(i_obs)){
         for(s in 1:(ns-1)){
-          tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-          if(tau_re_dim[[s]]>0){
-            tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+          if(MR_settings$mod=="MSt"){
+            tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+            if(tau_re_dim[[s]]>0){
+              tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+            }
+          }else{
+            tau__pred[t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
           }
 
           gamma_pred[s,s,j,id_cnt] <- -1. * exp(t(pdm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]])
@@ -506,7 +524,7 @@ test_f <- function(parms){
           if(ns>2 & s==1){
             gamma_pred[1,2,j,id_cnt] <- pdm$eta[[1]]$X[eta_ii,] %*% eta
           }
-          gamma_pred[s,s,j,id_cnt] <- -1. * exp(gamma_pred[s,s,j,id_cnt])
+          gamma_pred[s,s,j,id_cnt] <- -1. * (gamma_pred[s,s,j,id_cnt])
         }
         eta_ii <- eta_ii + 1
       }
@@ -515,23 +533,31 @@ test_f <- function(parms){
         gamma_pred[s,ns,j,id_cnt] <- -1 * sum(gamma_pred[s,s:(ns-1),j,id_cnt])
         omega_pred[s,ns,j,id_cnt] <- -1 * sum(omega_pred[s,s:(ns-1),j,id_cnt])
       }
-      gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])*tau__pred[t_cnt]))
+      if(MR_settings$mod == "MSt"){
+        gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])*tau__pred[t_cnt]))
+      }else{
+        gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])))
+      }
       omega_pred[,,j,id_cnt] <- as.array(Matrix::expm((omega_pred[,,j,id_cnt])))
       t_cnt <- t_cnt + 1
     }
     id_cnt <- id_cnt + 1
   }
 
-  gamma_pred <- gamma_pred[,,2:3,]
-  omega_pred <- omega_pred[,,2:3,]
+  gamma_pred <- RTMB::qlogis(gamma_pred[1,1,2,])
+  omega_pred <- RTMB::qlogis(omega_pred[1,1,2,])
 
   RTMB::REPORT(ii)
   RTMB::REPORT(id_cnt)
   RTMB::REPORT(ii)
 
+  RTMB::REPORT(pp)
+  RTMB::REPORT(nn)
   RTMB::REPORT(phi)
   RTMB::REPORT(phi_s)
   RTMB::REPORT(phi_re_s)
+  RTMB::REPORT(data_tau)
+  RTMB::REPORT(data_est)
   RTMB::REPORT(p)
   RTMB::REPORT(p_s)
   RTMB::REPORT(p_re_s)
@@ -554,8 +580,11 @@ test_f <- function(parms){
   RTMB::REPORT(omega_pred)
   RTMB::REPORT(tau_pred)
   RTMB::REPORT(tau__pred)
+  RTMB::REPORT(data_est_n)
+  RTMB::REPORT(data_omega)
   RTMB::ADREPORT(gamma_pred)
   RTMB::ADREPORT(omega_pred)
+
   return(nll2)
 }
 
@@ -590,7 +619,7 @@ create_design_matrices <- function(settings, data) {
           design_matrices[[i]] <- lF
         }else{
           design_matrices[[i]] <- list()
-          design_matrices[[i]]$X <- model.matrix(formula(current_formula), tmp_data)
+          design_matrices[[i]]$X <- Matrix::Matrix(model.matrix(formula(current_formula), tmp_data), sparse = TRUE)
           design_matrices[[i]]$reTrms <- list()
           design_matrices[[i]]$fr <- tmp_data
         }
@@ -701,10 +730,8 @@ create_pred_matrices <- function(object, basis, new_grid) {
 
       tryCatch({
         if(max(attr(gregexpr("\\|",current_formula)[[1]],"match.length"))>0){
-          print(paste(model_type,"lF"))
             lF <- lme4::lFormula(formula(paste(state,current_formula)), tmp_data)
             design_matrices[[i]] <- lF
-
           if(attr(gregexpr("poly", current_formula)[[1]],"match.length")>(-1)){
             poly_vars <- names(basis[[model_type]][[i]])
             for(p in poly_vars){
@@ -713,19 +740,20 @@ create_pred_matrices <- function(object, basis, new_grid) {
           }
         }else{
           design_matrices[[i]] <- list()
+          # print('names(basis)')
+          # print(names(basis[[model_type]][[i]]))
           #you need to get the original poly basis transformation for consistency
-          if(attr(gregexpr("poly", current_formula)[[1]],"match.length")>(-1)){
+          if(max(attr(gregexpr("poly", current_formula)[[1]],"match.length"))>(-1)){
             design_matrices[[i]]$X <- model.matrix(formula(current_formula), tmp_data)
             poly_vars <- names(basis[[model_type]][[i]])
+            # print(poly_vars)
             for(p in poly_vars){
-              design_matrices[[i]]$X[grep(p, colnames(design_matrices[[i]]$X), value = TRUE)] <- basis$phi[[p]]
+              design_matrices[[i]]$X[grep(p, colnames(design_matrices[[i]]$X), value = TRUE)] <- basis$phi[[i]][[p]]
             }
             #replace poly terms
             design_matrices[[i]]$reTrms <- list()
           }else{
-            # print("test")
-
-            design_matrices[[i]]$X <- model.matrix(formula(current_formula), tmp_data)
+            design_matrices[[i]]$X <- Matrix::Matrix(model.matrix(formula(current_formula), tmp_data), sparse = TRUE)
             design_matrices[[i]]$reTrms <- list()
           }
         }

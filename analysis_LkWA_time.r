@@ -2,10 +2,10 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 # rm(list = ls())
-# load("data/LkWA_time.rda")
-# load("data/LkWA_time_releasewk_length.rda")
+# load("data/LkWA.rda")
+load("data/LkWA_time_releasewk_length.rda")
 #
-load("data/LkWA_time_releasewk.rda")
+# load("data/LkWA_time_releasewk.rda")
 
 
 init_site = "tag"
@@ -24,12 +24,13 @@ LkWA <- LkWA %>%
   mutate(fwk = factor(wk, levels = sort(unique(wk)))) %>%
   # mutate(Length = as.numeric(as.character(Length))) %>%
   mutate(Year = as.numeric(as.character(Year))) %>%
-  # filter(Length < 150 & Length > 70) %>%
-  filter(Year < 2022 & Year > 2016) %>%
+  # filter(Length < 110 & Length > 70) %>%
+  filter(Year < 2022 & Year>2016 ) %>%
   filter(fSp == "Chinook") %>%
   filter(ReleaseSite %in% c("LWCEDR")) %>%
-  mutate(log_wk = log(wk)) %>%
+  # mutate(log_wk = log(wk)) %>%
   # filter(!is.na(Length)) %>%
+  # mutate(fLen = factor(Length, levels = sort(unique(Length)))) %>%
   droplevels()
 
 
@@ -39,10 +40,9 @@ MR_settings <- list(state = 'state',
                                 p = list(yr = ' ~ 1 + (1|fY)'), #detection probability
                                 lam = list(yr = ' ~ 1 + (1|fY)'), #nuisance parameter
                                 eta = list(yr = ' ~ -1'), #transition probability
-                                time = list(yr = ' ~ -1 + loc + (1|fwk)') #travel time
+                                time = list(yr = ' ~ -1 + loc + poly(wk,2) + (1|fY)') #travel time
                                 ), #transition probability
-
-                    mod = "MSt")
+                    mod = "MS")
 
 
 # Create an instance of the tmb_list class
@@ -50,7 +50,10 @@ input <- new("tmb_list",
                    MR_settings = MR_settings,
                    data = LkWA)
 
+
 #take the input and put it into a tmb model
 fit <- MStmb(input)
+print(fit@TMB$AICc)
+
 sd <- RTMB::sdreport(fit@TMB$obj)
 

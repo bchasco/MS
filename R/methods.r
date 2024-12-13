@@ -162,7 +162,7 @@ setMethod("MStmb", "tmb_list", function(object) {
                       lam_re_sig = rep(0 , sum(unlist(lam_re_sig))),
                       eta = rep(0 , sum(unlist(eta_dim))),
                       tau = rep(0, sum(unlist(tau_dim))),
-                      tau_sig = 0,
+                      tau_sig = rep(0,min(1,sum(unlist(tau_dim)))),
                       tau_re = rep(0 , sum(unlist(tau_re_dim))),
                       tau_re_sig = rep(0 , sum(unlist(tau_re_sig)))
                       )
@@ -176,15 +176,20 @@ setMethod("MStmb", "tmb_list", function(object) {
                          # map = list(sig = as.factor(NA)),
                          random = c("phi_re", "p_re","lam_re","tau_re"))
   #
+  map <- list()
+  # if(MR)
   object@TMB$obj <- obj
   object@TMB$obj$tmb.data <- tmb.data
 
+  print("test")
   object@TMB$opt <- nlminb(obj$par,
                            obj$fn,
                            obj$gr
                            )
   object@TMB$rep <- obj$report()
-
+  opt <- object@TMB$opt
+  object@TMB$AICc <- opt$objective +
+    2 * length(opt$par)
   object@TMB$parameters <- parameters
   invisible(return(object))  # Return the updated object with results
 
