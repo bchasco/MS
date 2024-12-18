@@ -27,6 +27,7 @@ setMethod("MStmb", "tmb_list", function(object) {
 
   tmb.data <<- list()
 
+
   design_matrices <- create_design_matrices(object@MR_settings, object@data)
   poly_basis <- create_poly_basis(object)
 
@@ -64,18 +65,28 @@ setMethod("MStmb", "tmb_list", function(object) {
   phi_re_sig <- list()
 
   phi_states <- length(tmb.data[['dm']][['phi']])
-  for(i in 1:phi_states){
+  for(i in 1:(ns-1)){
     if(length(object@MR_settings$frms$phi)>1){
       phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[i]]$X)
+
+      if(length(tmb.data[['dm']][['phi']][[i]][['reTrms']])>0){
+          phi_re_dim[[i]] <- sum(tmb.data[['dm']][['phi']][[i]][['reTrms']]$nl)
+          phi_re_sig[[i]] <- length(unique(tmb.data[['dm']][['phi']][[i]][['reTrms']]$Lind))
+      }else{
+        phi_re_dim[[i]] <- 0
+        phi_re_sig[[i]] <- NULL
+      }
     }else{
-      phi_dim[[i]] <- ncol(tmb.data[['dm']][['phi']][[1]]$X)
+      phi_dim[[1]] <- ncol(tmb.data[['dm']][['phi']][[1]]$X)
+      if(length(tmb.data[['dm']][['phi']][[1]][['reTrms']])>0 & i == 1){
+          phi_re_dim[[i]] <- sum(tmb.data[['dm']][['phi']][[1]][['reTrms']]$nl)
+          phi_re_sig[[i]] <- length(unique(tmb.data[['dm']][['phi']][[i]][['reTrms']]$Lind))
+      }else{
+        phi_re_dim[[i]] <- 0
+        phi_re_sig[[i]] <- NULL
+      }
     }
-    if(length(tmb.data[['dm']][['phi']][[i]][['reTrms']])>0){
-      phi_re_dim[[i]] <- sum(tmb.data[['dm']][['phi']][[i]][['reTrms']]$nl)
-      phi_re_sig[[i]] <- length(unique(tmb.data[['dm']][['phi']][[i]][['reTrms']]$Lind))
-    }else{
-      phi_re_dim[[i]] <- 0
-    }
+
   }
   tmb.data[['phi_dim']] <<- phi_dim
   tmb.data[['phi_re_dim']] <<- phi_re_dim
@@ -84,18 +95,28 @@ setMethod("MStmb", "tmb_list", function(object) {
   p_re_dim <- list()
   p_re_sig <- list()
   p_states <- length(tmb.data[['dm']][['p']])
-  for(i in 1:p_states){
+  for(i in 1:(ns-1)){
     if(length(object@MR_settings$frms$p)>1){
       p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[i]]$X)
+
+      if(length(tmb.data[['dm']][['p']][[i]][['reTrms']])>0){
+        p_re_dim[[i]] <- sum(tmb.data[['dm']][['p']][[i]][['reTrms']]$nl)
+        p_re_sig[[i]] <- length(unique(tmb.data[['dm']][['p']][[i]][['reTrms']]$Lind))
+      }else{
+        p_re_dim[[i]] <- 0
+        p_re_sig[[i]] <- NULL
+      }
     }else{
-      p_dim[[i]] <- ncol(tmb.data[['dm']][['p']][[1]]$X)
+      p_dim[[1]] <- ncol(tmb.data[['dm']][['p']][[1]]$X)
+      if(length(tmb.data[['dm']][['p']][[1]][['reTrms']])>0 & i == 1){
+        p_re_dim[[i]] <- sum(tmb.data[['dm']][['p']][[1]][['reTrms']]$nl)
+        p_re_sig[[i]] <- length(unique(tmb.data[['dm']][['p']][[i]][['reTrms']]$Lind))
+      }else{
+        p_re_dim[[i]] <- 0
+        p_re_sig[[i]] <- NULL
+      }
     }
-    if(length(tmb.data[['dm']][['p']][[i]][['reTrms']])>0){
-      p_re_dim[[i]] <- sum(tmb.data[['dm']][['p']][[i]][['reTrms']]$nl)
-      p_re_sig[[i]] <- length(unique(tmb.data[['dm']][['p']][[i]][['reTrms']]$Lind))
-    }else{
-      p_re_dim[[i]] <- 0
-    }
+
   }
   tmb.data[['p_dim']] <<- p_dim
   tmb.data[['p_re_dim']] <<- p_re_dim
@@ -108,7 +129,7 @@ setMethod("MStmb", "tmb_list", function(object) {
     if(length(object@MR_settings$frms$lam)>1){
       lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[i]]$X)
     }else{
-      lam_dim[[i]] <- ncol(tmb.data[['dm']][['lam']][[1]]$X)
+      lam_dim[[1]] <- ncol(tmb.data[['dm']][['lam']][[1]]$X)
     }
     if(length(tmb.data[['dm']][['lam']][[i]][['reTrms']])>0){
       lam_re_dim[[i]] <- sum(tmb.data[['dm']][['lam']][[i]][['reTrms']]$nl)
@@ -120,33 +141,55 @@ setMethod("MStmb", "tmb_list", function(object) {
   tmb.data[['lam_dim']] <<- lam_dim
   tmb.data[['lam_re_dim']] <<- lam_re_dim
 
-  eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x$X)})
-  eta_dim <- eta_dim[1]
+
+  eta_dim <- sapply(tmb.data[['dm']][['eta']],function(x){ncol(x$X)})[1]
+  eta_re_dim <- list()
+  eta_re_sig <- list()
+  eta_states <- length(tmb.data[['dm']][['eta']])
   tmb.data[['eta_dim']] <<- eta_dim
   if(ns < 3){
     eta_dim <- numeric(0)
     tmb.data[['eta_dim']] <<- eta_dim
   }
+  if(length(tmb.data[['dm']][['eta']][[1]][['reTrms']])>0){
+    eta_re_dim[[1]] <- sum(tmb.data[['dm']][['eta']][[1]][['reTrms']]$nl)
+    eta_re_sig[[1]] <- length(unique(tmb.data[['dm']][['eta']][[i]][['reTrms']]$Lind))
+  }else{
+    eta_re_dim[[1]] <- 0
+  }
+  tmb.data[['eta_re_dim']] <<- eta_re_dim
 
   tau_dim <- list()
   tau_re_dim <- list()
   tau_re_sig <- list()
-
   tau_states <- length(tmb.data[['dm']][['tau']])
-  for(i in 1:tau_states){
-    if(length(object@MR_settings$frms$phi)>1){
+  for(i in 1:(ns-1)){
+    if(length(object@MR_settings$frms$tau)>1){
       tau_dim[[i]] <- ncol(tmb.data[['dm']][['tau']][[i]]$X)
+
+      if(length(tmb.data[['dm']][['tau']][[i]][['reTrms']])>0){
+        tau_re_dim[[i]] <- sum(tmb.data[['dm']][['tau']][[i]][['reTrms']]$nl)
+        tau_re_sig[[i]] <- length(unique(tmb.data[['dm']][['tau']][[i]][['reTrms']]$Lind))
+      }else{
+        tau_re_dim[[i]] <- 0
+        tau_re_sig[[i]] <- NULL
+      }
     }else{
-      tau_dim[[i]] <- ncol(tmb.data[['dm']][['tau']][[1]]$X)
+      tau_dim[[1]] <- ncol(tmb.data[['dm']][['tau']][[1]]$X)
+      if(length(tmb.data[['dm']][['tau']][[1]][['reTrms']])>0 & i == 1){
+        tau_re_dim[[i]] <- sum(tmb.data[['dm']][['tau']][[1]][['reTrms']]$nl)
+        tau_re_sig[[i]] <- length(unique(tmb.data[['dm']][['tau']][[i]][['reTrms']]$Lind))
+      }else{
+        tau_re_dim[[i]] <- 0
+        tau_re_sig[[i]] <- NULL
+      }
     }
-    if(length(tmb.data[['dm']][['tau']][[i]][['reTrms']])>0){
-      tau_re_dim[[i]] <- sum(tmb.data[['dm']][['tau']][[i]][['reTrms']]$nl)
-      tau_re_sig[[i]] <- length(unique(tmb.data[['dm']][['tau']][[i]][['reTrms']]$Lind))
-    }else{
-      tau_re_dim[[i]] <- 0
-    }
+
   }
   tmb.data[['tau_dim']] <<- tau_dim
+  if(is.null(tmb.data$data$time)){
+    tmb.data[['tau_dim']] <<- 0
+  }
   tmb.data[['tau_re_dim']] <<- tau_re_dim
 
   tmb.data$MR_settings <<- object@MR_settings
@@ -159,24 +202,37 @@ setMethod("MStmb", "tmb_list", function(object) {
                       p_re_sig = rep(0 , sum(unlist(p_re_sig))),
                       lam = rep(-3, sum(unlist(lam_dim))),
                       lam_re = rep(0 , sum(unlist(lam_re_dim))),
-                      lam_re_sig = rep(0 , sum(unlist(lam_re_sig))),
+                      lam_re_sig = rep(1 , sum(unlist(lam_re_sig))),
                       eta = rep(0 , sum(unlist(eta_dim))),
-                      tau = rep(0, sum(unlist(tau_dim))),
-                      tau_sig = rep(0,min(1,sum(unlist(tau_dim)))),
+                      eta_re = rep(0 , sum(unlist(eta_re_dim))),
+                      eta_re_sig = rep(0 , sum(unlist(eta_re_sig))),
+                      tau = rep(2, sum(unlist(tau_dim))),
+                      tau_sig = rep(1,max(1,sum(unlist(tau_dim))-1)),
                       tau_re = rep(0 , sum(unlist(tau_re_dim))),
-                      tau_re_sig = rep(0 , sum(unlist(tau_re_sig)))
+                      tau_re_sig = rep(2 , sum(unlist(tau_re_sig)))
                       )
 
 
   environment(test_f) <- .GlobalEnv
 
+  print("test")
+  map <- list()
+  if(MR_settings$mod=="MS"){
+    map = append(map,
+                 list(tau_sig = as.factor(rep(NA,min(1,sum(unlist(tau_dim))))),
+                      tau = as.factor(rep(NA, sum(unlist(tau_dim)))),
+                      tau_re = as.factor(rep(NA , sum(unlist(tau_re_dim)))),
+                      tau_re_sig = as.factor(rep(NA , sum(unlist(tau_re_sig))))
+                 )
+                 )
+  }
+
   obj <- RTMB::MakeADFun(test_f,
                          parameters,
                          silent = FALSE,
-                         # map = list(sig = as.factor(NA)),
-                         random = c("phi_re", "p_re","lam_re","tau_re"))
+                         map = map,
+                         random = c("phi_re", "p_re","lam_re","tau_re","eta_re"))
   #
-  map <- list()
   # if(MR)
   object@TMB$obj <- obj
   object@TMB$obj$tmb.data <- tmb.data

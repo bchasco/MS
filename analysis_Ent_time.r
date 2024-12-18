@@ -36,8 +36,12 @@ MR_settings <- list(state = 'state',
                                 p = list(yr = ' ~ 1 '), #detection probability
                                 lam = list(yr = ' ~ 1  '), #nuisance parameter
                                 eta = list(yr = ' ~ 1'), #transition probability
-                                time = list(yr = ' ~ -1 + ReleaseSite + fwk') #travel time
+                                time = list(sub = ' ~ -1 + loc',
+                                            yr = '~ -1 + loc') #travel time
                                 ), #transition probability
+                    dv = list(state = "yr",
+                              loc = "as.Smolt"
+                              ),
 
                     mod = "MSt")
 

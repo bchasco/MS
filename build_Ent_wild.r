@@ -30,7 +30,7 @@ recode <- read.csv("data/hatchery_lookup.csv", header = TRUE)
 
 
 #parse out the event site information
-#This throws an error because one of the entries has 2 "-" instead of 1. Doesn't affect the result.
+#This throws an error because one of the entries has 2 "-" instead of 1. Doesn't affect the result
 combined_data$`Event Site Code Value` <- do.call(rbind,strsplit(combined_data$`Event Site Name`," - "))[,1]
 
 
@@ -53,6 +53,9 @@ ch <- combined_data[,] %>%
   mutate(`Event Date MMDDYYYY` = lubridate::ymd(`Event Date MMDDYYYY`)) %>%
   mutate(event_day = lubridate::yday(`Event Date MMDDYYYY`)) %>%
   mutate(stage = ifelse(event_day<=181,"yr","sub")) %>% #<July 1 is a yearling
+  group_by(`Tag Code`) %>%
+  mutate(init_stage = first(na.omit(stage))) %>% #<July 1 is a yearling
+  mutate(stage = ifelse(stage<init_stage,init_stage,stage)) %>% #fish can only get older
   group_by(`Tag Code`,
            init_year,
            `Event Site Code Value`) %>%
@@ -89,7 +92,8 @@ ch <- ch %>%
   # mutate(stage = ifelse(init_stage == "sub", "yr", stage)) %>%
   mutate(cum_time = julian(as.Date(`Event Date MMDDYYYY`),
                            origin = as.Date("1970-01-01")) - julian(as.Date(init_date), origin = as.Date("1970-01-01"))) %>%
-  filter(cum_time <= 365)
+  filter(cum_time <= 365) #%>%
+  # mutate(stage = ifelse((event_day+cum_time)<=181,"yr","sub")) #fix stages
 
 
 #Remove recaptures not represented by the location lookup above.
@@ -106,7 +110,7 @@ ch_complete <- ch[,] %>%
   mutate(state = as.integer(stage)) %>%
   droplevels() %>%
   filter(init_num%in%(locs)) %>% #be suer you don't take capture histories for fish tagged upstream
-  select(`Tag Code`, stage, IDnum, loc_code, init_week, cum_time, `Event Species Name`) %>%
+  select(`Tag Code`, stage, IDnum, loc_code, init_week, cum_time, init_stage, `Event Species Name`) %>%
   left_join(dimnames, by = c("IDnum" = "dimID")) %>% #This adds the capture locations from dimnames
   mutate(loc = ifelse(!is.na(Caploc), Caploc, IDnum)) %>%
   filter(loc %in% dimnames$Caploc[dimnames$dimID%in%locs]) %>%

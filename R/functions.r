@@ -157,19 +157,21 @@ test_f <- function(parms){
 
   #Fill the survival list
   phi_re_s <- list()
+  print(phi_re_s)
   icnt <- 0
-  if(length(phi_re_dim)>1){
-    for(i in seq_along(phi_re_dim)){
-      if(phi_re_dim[[i]]>0){
+  for(i in 1:(ns-1)){
+    if(length(phi_dim)>1){
+      if(phi_re_dim[[i]]>0){ #MS model with re
         phi_re_s[[i]] <- phi_re[(icnt+1):(icnt+phi_re_dim[[i]])] #phi is a vector
-      }else{
-        phi_re_s[[i]] <- NULL
+        icnt <- icnt + sum(phi_re_dim[[i]])
       }
-      icnt <- icnt + sum(phi_re_dim[[i]])
     }
-  }else{
-    for(i in 1:(ns-1)){
-      phi_re_s[[i]] <- phi_re #phi is a vector
+    if(length(phi_dim)==1){ #single state model with re
+      if(phi_re_dim[[1]]>0){
+        for(i in 1:(ns-1)){
+          phi_re_s[[i]] <- phi_re #phi is a vector
+        }
+      }
     }
   }
 
@@ -178,62 +180,66 @@ test_f <- function(parms){
   icnt <- 0
   if(length(p_dim)>1){
     for(i in seq_along(p_dim)){
-      p_s[[i]] <- p[(icnt+1):(icnt + p_dim[[i]])] #phi is a vector
+      p_s[[i]] <- p[(icnt+1):(icnt+p_dim[[i]])] #phi is a vector
       icnt <- icnt + sum(p_dim[[i]])
     }
   }else{
     for(i in 1:(ns-1)){
-      p_s[[i]] <- p #p is a vector
+      p_s[[i]] <- p #phi is a vector
     }
   }
+
 
   #Fill the survival list
   p_re_s <- list()
   icnt <- 0
-  if(length(p_re_dim)>1){
-    for(i in seq_along(p_re_dim)){
-      if(p_re_dim[[i]]>0){
+  for(i in 1:(ns-1)){
+    if(length(p_dim)>1){
+      if(p_re_dim[[i]]>0){ #MS model with re
         p_re_s[[i]] <- p_re[(icnt+1):(icnt+p_re_dim[[i]])] #phi is a vector
-      }else{
-        p_re_s[[i]] <- NULL
+        icnt <- icnt + sum(p_re_dim[[i]])
       }
-      icnt <- icnt + sum(p_re_dim[[i]])
     }
-  }else{
-    for(i in 1:(ns-1)){
-      p_re_s[[i]] <- p_re #phi is a vector
+    if(length(p_dim)==1){ #single state model with re
+      if(p_re_dim[[1]]>0){
+        for(i in 1:(ns-1)){
+          p_re_s[[i]] <- p_re #phi is a vector
+        }
+      }
     }
   }
 
-  #Fill the detection list
+  #Fill the travel time list
   tau_s <- list()
   icnt <- 0
   if(length(tau_dim)>1){
     for(i in seq_along(tau_dim)){
-      tau_s[[i]] <- tau[(icnt+1):(icnt + tau_dim[[i]])] #phi is a vector
+      tau_s[[i]] <- tau[(icnt+1):(icnt+tau_dim[[i]])] #phi is a vector
       icnt <- icnt + sum(tau_dim[[i]])
     }
   }else{
     for(i in 1:(ns-1)){
-      tau_s[[i]] <- tau #p is a vector
+      tau_s[[i]] <- tau #phi is a vector
     }
   }
+
 
   #Fill the survival list
   tau_re_s <- list()
   icnt <- 0
-  if(length(tau_re_dim)>1){
-    for(i in seq_along(tau_re_dim)){
-      if(tau_re_dim[[i]]>0){
+  for(i in 1:(ns-1)){
+    if(length(tau_dim)>1){
+      if(tau_re_dim[[i]]>0){ #MS model with re
         tau_re_s[[i]] <- tau_re[(icnt+1):(icnt+tau_re_dim[[i]])] #phi is a vector
-      }else{
-        tau_re_s[[i]] <- NULL
+        icnt <- icnt + sum(tau_re_dim[[i]])
       }
-      icnt <- icnt + sum(tau_re_dim[[i]])
     }
-  }else{
-    for(i in 1:(ns-1)){
-      tau_re_s[[i]] <- tau_re #phi is a vector
+    if(length(tau_dim)==1){ #single state model with re
+      if(tau_re_dim[[1]]>0){
+        for(i in 1:(ns-1)){
+          tau_re_s[[i]] <- tau_re #phi is a vector
+        }
+      }
     }
   }
 
@@ -269,6 +275,7 @@ test_f <- function(parms){
     }
   }
 
+
   phi_tmp <- c(RTMB::plogis(phi),RTMB::plogis(lam))
   p_tmp <- c(RTMB::plogis(p),RTMB::plogis(lam))
 
@@ -277,7 +284,7 @@ test_f <- function(parms){
   ii <- 1 #design matrix increment
   eta_ii <- 1 #transition matrix increment
 
-  tau_pred <- rep(0,nrow(dm$tau[[1]]$X))
+  tau_pred <- matrix(0,ns,nrow(dm$tau[[1]]$X))
   tau_acc <- rep(0,nrow(dm$tau[[1]]$X))
   data_tau <- rep(0,nrow(data))
   data_est <- rep(0,nrow(data))
@@ -290,6 +297,7 @@ test_f <- function(parms){
 
   ij_cnt <- 1
 
+  print(tau_s)
   for(i in unique(data$id)){
     #fill the gamma matrix,
     #Observation for the ith "fish"
@@ -318,98 +326,128 @@ test_f <- function(parms){
       # tau_acc <- 0
       data_est[ij_cnt] <- 1
       ij_cnt <- ij_cnt + 1
+      tau_scale <- rep(1, length(t_obs))
+
       for(j in (init_loc+1):length(i_obs)){
         # if(MR_settings$mod == "MSt"){
-          if(j < length(i_obs)){
-            for(s in 1:(ns-1)){
-
-              tau_pred[t_cnt] <- exp(t(dm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-
-              if(tau_re_dim[[s]]>0){
-                tau_pred[t_cnt] <- tau_pred[t_cnt] * exp(t(dm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
-              }
-
-              if(phi_dim[[s]]>0){
-                gamma[s,s,j,id_cnt] <- t(dm$phi[[s]]$X[ii,]) %*% phi_s[[s]]
-                if(phi_re_dim[[s]]>0){
-                  gamma[s,s,j,id_cnt] <- -1. * exp(gamma[s,s,j,id_cnt]) * exp(t(dm$phi[[s]]$reTrms$Zt[,ii]) %*% phi_re_s[[s]])
-                }else{
-                  gamma[s,s,j,id_cnt] <- -1. * exp(gamma[s,s,j,id_cnt])
-                }
-
-              }else{
-                gamma[s,s,j,id_cnt] <- 0
-              }
-
-              omega[s,s,j,id_cnt] <- t(dm$p[[s]]$X[ii,]) %*% p_s[[s]]
-              if(p_re_dim[[s]]>0){
-                omega[s,s,j,id_cnt] <- -1. * exp(omega[s,s,j,id_cnt]) * exp(t(dm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]])
-              }
-              omega[s,s,j,id_cnt] <- -1. * exp(omega[s,s,j,id_cnt])
-
-              if(ns>2 & s==1){
-                gamma[1,2,j,id_cnt] <- (dm$eta[[1]]$X[eta_ii,] %*% eta)
-                gamma[1,1,j,id_cnt] <- gamma[1,1,j,id_cnt] + (dm$eta[[1]]$X[eta_ii,] %*% eta)
-              }
-            }
-
-            ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii
-            eta_ii <- eta_ii + 1
+        for(s in 1:(ns-1)){ #don't do the last state - "unk"
+          tau_pred[s,t_cnt] <- exp(t(dm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+          if(tau_re_dim[[s]]>0){
+            tau_pred[s,t_cnt] <- tau_pred[s,t_cnt] * exp(t(dm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
           }
-
-          print(gamma[,,j,id_cnt])
-          if(j == length(i_obs)){
-            for(s in 1:(ns-1)){
-              tau_pred[t_cnt] <- exp(t(dm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-              if(tau_re_dim[[s]]>0){
-                tau_pred[t_cnt] <- tau_pred[t_cnt] * exp(t(dm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
-              }
-
-              lam <- t(dm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]]
-              if(lam_re_dim[[s]]>0){
-                lam <- -1. * exp(lam) * exp(t(dm$lam[[s]]$reTrms$Zt[,id_cnt]) %*% lam_re_s[[s]])
-              }else{
-                lam <- -1. * exp(lam)
-              }
-              gamma[s,s,j,id_cnt] <- lam
-              omega[s,s,j,id_cnt] <- lam
-
-              if(ns>2 & s==1){
-                gamma[1,2,j,id_cnt] <- dm$eta[[1]]$X[eta_ii,] %*% eta
-              }
-            }
-            # print(paste(id_cnt,j))
-            # print(t_obs)
-            eta_ii <- eta_ii + 1
-          }
-
+          tau_scale[s] <- tau_pred[s,t_cnt]
+        }
         if(!is.na(t_obs[j])){
-          # print("timing like")
-          nll2 <- nll2 - RTMB::dnorm((t_obs[j]), (tau_pred[t_cnt]), exp(tau_sig), log = TRUE) * n_i
+          nll2 <- nll2 - RTMB::dnorm((t_obs[j]), (tau_pred[i_obs[j],t_cnt]), exp(tau_sig[i_obs[j]]), log = TRUE) * n_i
+        }
+
+        if(j < length(i_obs)){
+          for(s in 1:(ns-1)){ #don't do the last state - "unk"
+
+            tau_pred[s,t_cnt] <- exp(t(dm$tau[[init_state]]$X[t_cnt,]) %*% tau_s[[init_state]])
+            if(tau_re_dim[[s]]>0){
+              tau_pred[s,t_cnt] <- tau_pred[s,t_cnt] * exp(t(dm$tau[[init_state]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[init_state]])
+            }
+            tau_scale[s] <- tau_pred[s,t_cnt]
+
+            # if(phi_dim[[s]]>0){
+              gamma[s,s,j,id_cnt] <- t(dm$phi[[s]]$X[ii,]) %*% phi_s[[s]]
+              if(phi_re_dim[[s]]>0){
+                gamma[s,s,j,id_cnt] <- -1. * exp(gamma[s,s,j,id_cnt] + t(dm$phi[[s]]$reTrms$Zt[,ii]) %*% phi_re_s[[s]])
+              }else{
+                gamma[s,s,j,id_cnt] <- -1. * exp(gamma[s,s,j,id_cnt])
+              }
+
+            # }#else{
+              #gamma[s,s,j,id_cnt] <- 0
+            #}
+
+            omega[s,s,j,id_cnt] <- t(dm$p[[s]]$X[ii,]) %*% p_s[[s]]
+            if(p_re_dim[[s]]>0){
+              omega[s,s,j,id_cnt] <- -1. * exp(omega[s,s,j,id_cnt] + t(dm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]])
+            }else{
+              omega[s,s,j,id_cnt] <- -1. * exp(omega[s,s,j,id_cnt])
+            }
+
+            if(ns>2 & s==1){
+              gamma[1,2,j,id_cnt] <- exp(dm$eta[[1]]$X[eta_ii,] %*% eta)
+              gamma[1,1,j,id_cnt] <- gamma[1,1,j,id_cnt] - gamma[1,2,j,id_cnt]
+            }
+          }
+
+          ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii
+          eta_ii <- eta_ii + 1
+          # tau_scale[ns] <- tau_scale[1] * 0.995 + tau_scale[2] * 0.005
+          # tau_pred[ns,t_cnt]  = tau_scale[ns]
+        }
+
+        if(j == length(i_obs)){
+          for(s in 1:(ns-1)){
+
+            # tau_pred[s,t_cnt] <- exp(t(dm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+            # if(tau_re_dim[[s]]>0){
+            #   tau_pred[s,t_cnt] <- tau_pred[s,t_cnt] * exp(t(dm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+            # }
+            # tau_scale[s] <- tau_pred[s,t_cnt]
+
+            lam <- t(dm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]]
+            if(lam_re_dim[[s]]>0){
+              lam <- -1. * exp(lam) * exp(t(dm$lam[[s]]$reTrms$Zt[,id_cnt]) %*% lam_re_s[[s]])
+            }else{
+              lam <- -1. * exp(lam)
+            }
+            gamma[s,s,j,id_cnt] <- lam #all fish move to yearling in last stage.
+            omega[s,s,j,id_cnt] <- lam
+
+            if(ns>2 & s==1){
+              gamma[1,2,j,id_cnt] <- exp(dm$eta[[1]]$X[eta_ii,] %*% eta)
+              if(eta_re_dim[[s]]>0){
+                gamma[1,2,j,id_cnt] <- gamma[1,2,j,id_cnt] * exp(t(dm$eta[[1]]$reTrms$Zt[,id_cnt]) %*% eta_re)
+              }
+              gamma[1,1,j,id_cnt] <- lam - gamma[1,2,j,id_cnt]#all fish move to yearling in last stage.
+            }
+          }
+          # print(paste(id_cnt,j))
+          # print(t_obs)
+          eta_ii <- eta_ii + 1
+          # tau_scale[ns] <- tau_scale[1] * 0.995 + tau_scale[2] * 0.005
+          # tau_pred[ns,t_cnt]  = tau_scale[ns]
         }
 
         for(s in 1:(ns-1)){
+          # if(s==1) print(gamma[s,,j,id_cnt])
             gamma[s,ns,j,id_cnt] <- -1 * sum(gamma[s,s:(ns-1),j,id_cnt])
             omega[s,ns,j,id_cnt] <- -1 * sum(omega[s,s:(ns-1),j,id_cnt])
-          }
+            # if(s==1)  print(gamma[s,,j,id_cnt])
+        }
 
-          tmp_omega <- RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
-          if(MR_settings$mod == "MSt"){
-            tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]) * tau_pred[t_cnt])
-            prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
-               tmp_gamma %*%
-              tmp_omega
-          }else{
-            tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]))
-            prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
-              tmp_gamma %*%
-              tmp_omega
-          }
-          data_est[ij_cnt] <- data_est[ij_cnt-1] * tmp_gamma[1,1]
-          data_omega[ij_cnt] <- tmp_omega[1,1]
-          data_est_n[ij_cnt] <- data_est[ij_cnt] * tmp_omega[1,1] * n_i
-          # }
+        tmp_omega <- RTMB::diag(Matrix::expm(omega[,,j,id_cnt])[,i_obs[j]])
+
+        if(MR_settings$mod == "MSt"){
+
+          tmp_gamma <- RTMB::diag(tau_scale) %*% (gamma[,,j,id_cnt])
+          gamma[,,j,id_cnt] <- tmp_gamma
+          prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
+            Matrix::expm(tmp_gamma) %*%
+            tmp_omega
+
+        }else{
+
+          tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]))
+          prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
+            tmp_gamma %*%
+            tmp_omega
+
+        }
+        # print(paste(id_cnt,j))
+        # # print(tau_pred[j_cnt])
+        # print(tmp_gamma)
+
+        data_est[ij_cnt] <- data_est[ij_cnt-1] * tmp_gamma[1,1]
+        data_omega[ij_cnt] <- tmp_omega[1,1]
+        data_est_n[ij_cnt] <- data_est[ij_cnt] * tmp_omega[1,1] * n_i
         data_tau[ij_cnt] <- tau_pred[t_cnt]
+
         t_cnt <- t_cnt + 1
         ij_cnt <- ij_cnt + 1
       }
@@ -420,27 +458,52 @@ test_f <- function(parms){
     }
   }
 
-  print("test")
+  if(length(phi_re_s)>0){
+    for(i in 1:length(phi_re_s)){
+      if(!is.null(phi_re_s[[i]])){
+        nll2 <- nll2 - sum(RTMB::dnorm(phi_re_s[[i]],
+                                       -0,
+                                       exp(phi_re_sig[dm$phi[[i]]$reTrms$Lind]),
+                                       log = TRUE))
+      }
+    }
+  }
 
-  nll2 <- nll2 - sum(RTMB::dnorm(phi_re_s[[1]],
-                                 0,
-                                 exp(phi_re_sig[dm$phi[[1]]$reTrms$Lind]),
-                                 log = TRUE))
+  if(length(p_re_s)>0){
+    for(i in 1:length(p_re_s)){
+      if(!is.null(p_re_s[[i]])){
+        nll2 <- nll2 - sum(RTMB::dnorm(p_re_s[[i]],
+                                       -0,
+                                       exp(p_re_sig[dm$p[[i]]$reTrms$Lind]),
+                                       log = TRUE))
+      }
+    }
+  }
 
-  nll2 <- nll2 - sum(RTMB::dnorm(p_re_s[[1]],
-                                 0,
-                                 exp(p_re_sig[dm$p[[1]]$reTrms$Lind]),
-                                 log = TRUE))
-
-  nll2 <- nll2 - sum(RTMB::dnorm(lam_re_s[[1]],
-                                 0,
+  if(length(lam_re_s)>0){
+    nll2 <- nll2 - sum(RTMB::dnorm(lam_re_s[[1]],
+                                 -0.,
                                  exp(lam_re_sig[dm$lam[[1]]$reTrms$Lind]),
                                  log = TRUE))
+  }
 
-  nll2 <- nll2 - sum(RTMB::dnorm(tau_re_s[[1]],
-                                 0,
-                                 exp(tau_re_sig[dm$tau[[1]]$reTrms$Lind]),
-                                 log = TRUE))
+  if(length(tau_re_s)>0){
+    for(i in 1:length(tau_re_s)){
+      if(!is.null(tau_re_s[[i]])){
+        nll2 <- nll2 - sum(RTMB::dnorm(tau_re_s[[i]],
+                                       -0,
+                                       exp(tau_re_sig[dm$tau[[i]]$reTrms$Lind]),
+                                       log = TRUE))
+      }
+    }
+  }
+
+  if(length(eta_re)>0){
+    nll2 <- nll2 - sum(RTMB::dnorm(eta_re,
+                                   0,
+                                   exp(eta_re_sig[dm$eta[[1]]$reTrms$Lind]),
+                                   log = TRUE))
+  }
 
   pd <- tmb.data$pred.grid
   pdm <- tmb.data$pred$dm
@@ -459,93 +522,96 @@ test_f <- function(parms){
                                       current_state = levels(state),
                                       j = levels(data$loc),
                                       i = 1:pni))
-  tau__pred <- rep(0,nrow(pdm$tau[[1]]$X))
+  tau__pred <- matrix(0,ns,nrow(pdm$tau[[1]]$X))
 
-  for(i in unique(pd$id)){
-    #fill the gamma matrix,
-    #Observation for the ith "fish"
-    i_obs <- as.integer(pd$state[pd$id==i])
-    #Initial location of the ith fish
-    init_loc <- 1#min(which(i_obs < ns,arr.ind=TRUE))
+  # for(i in unique(pd$id)){
+  #   #fill the gamma matrix,
+  #   #Observation for the ith "fish"
+  #   i_obs <- as.integer(pd$state[pd$id==i])
+  #   #Initial location of the ith fish
+  #   init_loc <- 1#min(which(i_obs < ns,arr.ind=TRUE))
+  #
+  #   #initial state
+  #   init_state <- 2#i_obs[init_loc]
+  #
+  #   last_loc <- 3#max(which(i_obs < ns,arr.ind=TRUE))
+  #
+  #   for(j in (init_loc+1):length(i_obs)){
+  #     if(j < length(i_obs)){
+  #       for(s in 1:(ns-1)){
+  #         if(MR_settings$mod == "MSt"){
+  #           tau__pred[s+1,t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+  #           if(tau_re_dim[[s]]>0){
+  #             tau__pred[s+1,t_cnt] <- tau__pred[s+1,t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+  #           }
+  #         }else{
+  #           tau__pred[s+1,t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
+  #         }
+  #         # if(phi_dim[[s]]>0){
+  #           gamma_pred[s,s,j,id_cnt] <- exp(t(pdm$phi[[s]]$X[ii,]) %*% phi_s[[s]])
+  #           if(phi_re_dim[[s]]>0){
+  #             gamma_pred[s,s,j,id_cnt] <- gamma_pred[s,s,j,id_cnt] * exp(t(pdm$phi[[s]]$reTrms$Zt[,ii]) %*% phi_re_s[[s]])
+  #           }
+  #           gamma_pred[s,s,j,id_cnt] <- -1. * gamma_pred[s,s,j,id_cnt]
+  #         # }else{
+  #           # gamma_pred[s,s,j,id_cnt] <- 0
+  #         # }
+  #
+  #         omega_pred[s,s,j,id_cnt] <- exp(t(pdm$p[[s]]$X[ii,]) %*% p_s[[s]])
+  #         if(p_re_dim[[s]]>0){
+  #           omega_pred[s,s,j,id_cnt] <- omega_pred[s,s,j,id_cnt] * exp(t(pdm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]])
+  #         }
+  #         omega_pred[s,s,j,id_cnt] <- -1. * (omega_pred[s,s,j,id_cnt])
+  #
+  #         if(ns>2 & s==1){
+  #           gamma_pred[1,2,j,id_cnt] <- - exp(pdm$eta[[1]]$X[eta_ii,] %*% eta)
+  #           gamma_pred[1,1,j,id_cnt] <- gamma_pred[1,1,j,id_cnt] - gamma_pred[1,2,j,id_cnt]
+  #         }
+  #       }
+  #       ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii, but only from init + 1 : last - 1
+  #       eta_ii <- eta_ii + 1
+  #     }
+  #
+  #     if(j == length(i_obs)){
+  #       for(s in 1:(ns-1)){
+  #         if(MR_settings$mod=="MSt"){
+  #           tau__pred[s,t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
+  #           if(tau_re_dim[[s]]>0){
+  #             tau__pred[s,t_cnt] <- tau__pred[s,t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
+  #           }
+  #         }else{
+  #           tau__pred[s,t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
+  #         }
+  #
+  #         gamma_pred[s,s,j,id_cnt] <- -1. * exp(t(pdm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]])
+  #         omega_pred[s,s,j,id_cnt] <- -1. * exp(t(pdm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]])
+  #         if(ns>2 & s==1){
+  #           gamma_pred[1,2,j,id_cnt] <- pdm$eta[[1]]$X[eta_ii,] %*% eta
+  #         }
+  #         gamma_pred[s,s,j,id_cnt] <- -1. * (gamma_pred[s,s,j,id_cnt])
+  #       }
+  #       eta_ii <- eta_ii + 1
+  #     }
+  #
+  #     for(s in 1:(ns-1)){
+  #       gamma_pred[s,ns,j,id_cnt] <- -1 * sum(gamma_pred[s,s:(ns-1),j,id_cnt])
+  #       omega_pred[s,ns,j,id_cnt] <- -1 * sum(omega_pred[s,s:(ns-1),j,id_cnt])
+  #     }
+  #     if(MR_settings$mod == "MSt"){
+  #       gamma_pred[,,j,id_cnt] <- as.array(RTMB::diag(tau__pred[,t_cnt]) %*% Matrix::expm((gamma_pred[,,j,id_cnt])))
+  #     }else{
+  #       gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])))
+  #     }
+  #     omega_pred[,,j,id_cnt] <- as.array(Matrix::expm((omega_pred[,,j,id_cnt])))
+  #     t_cnt <- t_cnt + 1
+  #   }
+  #   id_cnt <- id_cnt + 1
+  # }
 
-    #initial state
-    init_state <- 2#i_obs[init_loc]
-
-    last_loc <- 3#max(which(i_obs < ns,arr.ind=TRUE))
-
-    for(j in (init_loc+1):length(i_obs)){
-      if(j < length(i_obs)){
-        for(s in 1:(ns-1)){
-          if(MR_settings$mod == "MSt"){
-            tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-            if(tau_re_dim[[s]]>0){
-              tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
-            }
-          }else{
-            tau__pred[t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
-          }
-          if(phi_dim[[s]]>0){
-            gamma_pred[s,s,j,id_cnt] <- exp(t(pdm$phi[[s]]$X[ii,]) %*% phi_s[[s]])
-            if(phi_re_dim[[s]]>0){
-              gamma_pred[s,s,j,id_cnt] <- gamma_pred[s,s,j,id_cnt] * exp(t(pdm$phi[[s]]$reTrms$Zt[,ii]) %*% phi_re_s[[s]])
-            }
-            gamma_pred[s,s,j,id_cnt] <- -1. * gamma_pred[s,s,j,id_cnt]
-          }else{
-            gamma_pred[s,s,j,id_cnt] <- 0
-          }
-
-          omega_pred[s,s,j,id_cnt] <- exp(t(pdm$p[[s]]$X[ii,]) %*% p_s[[s]])
-          if(p_re_dim[[s]]>0){
-            omega_pred[s,s,j,id_cnt] <- omega_pred[s,s,j,id_cnt] * exp(t(pdm$p[[s]]$reTrms$Zt[,ii]) %*% p_re_s[[s]])
-          }
-          omega_pred[s,s,j,id_cnt] <- -1. * (omega_pred[s,s,j,id_cnt])
-
-          if(ns>2 & s==1){
-            gamma_pred[1,2,j,id_cnt] <- - 1. * (pdm$eta[[1]]$X[eta_ii,] %*% eta)
-          }
-        }
-        ii <- ii + 1 #location incrementor. The design matrix is referenced by location ii, but only from init + 1 : last - 1
-        eta_ii <- eta_ii + 1
-      }
-
-      if(j == length(i_obs)){
-        for(s in 1:(ns-1)){
-          if(MR_settings$mod=="MSt"){
-            tau__pred[t_cnt] <- exp(t(pdm$tau[[s]]$X[t_cnt,]) %*% tau_s[[s]])
-            if(tau_re_dim[[s]]>0){
-              tau__pred[t_cnt] <- tau__pred[t_cnt] * exp(t(pdm$tau[[s]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[s]])
-            }
-          }else{
-            tau__pred[t_cnt] <- mean(na.omit(data$time[as.integer(data$loc)==j]))
-          }
-
-          gamma_pred[s,s,j,id_cnt] <- -1. * exp(t(pdm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]])
-          omega_pred[s,s,j,id_cnt] <- -1. * exp(t(pdm$lam[[s]]$X[id_cnt,]) %*% lam_s[[s]])
-          if(ns>2 & s==1){
-            gamma_pred[1,2,j,id_cnt] <- pdm$eta[[1]]$X[eta_ii,] %*% eta
-          }
-          gamma_pred[s,s,j,id_cnt] <- -1. * (gamma_pred[s,s,j,id_cnt])
-        }
-        eta_ii <- eta_ii + 1
-      }
-
-      for(s in 1:(ns-1)){
-        gamma_pred[s,ns,j,id_cnt] <- -1 * sum(gamma_pred[s,s:(ns-1),j,id_cnt])
-        omega_pred[s,ns,j,id_cnt] <- -1 * sum(omega_pred[s,s:(ns-1),j,id_cnt])
-      }
-      if(MR_settings$mod == "MSt"){
-        gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])*tau__pred[t_cnt]))
-      }else{
-        gamma_pred[,,j,id_cnt] <- as.array(Matrix::expm((gamma_pred[,,j,id_cnt])))
-      }
-      omega_pred[,,j,id_cnt] <- as.array(Matrix::expm((omega_pred[,,j,id_cnt])))
-      t_cnt <- t_cnt + 1
-    }
-    id_cnt <- id_cnt + 1
-  }
-
-  gamma_pred <- RTMB::qlogis(gamma_pred[1,1,2,])
-  omega_pred <- RTMB::qlogis(omega_pred[1,1,2,])
+  dv_state <- which(levels(tmb.data$data$state)%in%MR_settings$dv$state)
+  dv_loc <- which(levels(tmb.data$data$loc)%in%MR_settings$dv$loc)
+  gamma_pred <- RTMB::qlogis(gamma_pred[dv_state,dv_state,dv_loc,])
+  omega_pred <- RTMB::qlogis(omega_pred[dv_state,dv_state,dv_loc,])
 
   RTMB::REPORT(ii)
   RTMB::REPORT(id_cnt)
@@ -562,6 +628,7 @@ test_f <- function(parms){
   RTMB::REPORT(p_s)
   RTMB::REPORT(p_re_s)
   RTMB::REPORT(eta)
+  RTMB::REPORT(eta_re)
   RTMB::REPORT(lam)
   RTMB::REPORT(lam_s)
   RTMB::REPORT(lam_re_s)
@@ -611,7 +678,9 @@ create_design_matrices <- function(settings, data) {
       }else{
         pi <- i
       }
+
       current_formula <- formula_list[[pi]]
+
       tmp_data <- data_subset()
       tryCatch({
         if(min(attr(gregexpr("\\|",current_formula)[[1]],"match.length")>0)){
@@ -640,7 +709,7 @@ create_design_matrices <- function(settings, data) {
       filter(loc != tag_site & loc != last_site) %>%
       droplevels()
   }
-  phi_matrices <- generate_design_matrix(settings$frm$phi, phi_data_fn, "phi")
+  phi_matrices <- generate_design_matrix(settings$frms$phi, phi_data_fn, "phi")
   dm$phi <- phi_matrices$design
 
   # Generate design matrices for p
@@ -650,7 +719,7 @@ create_design_matrices <- function(settings, data) {
       filter(loc != tag_site & loc != last_site) %>%
       droplevels()
   }
-  p_matrices <- generate_design_matrix(settings$frm$p, p_data_fn, "p")
+  p_matrices <- generate_design_matrix(settings$frms$p, p_data_fn, "p")
   dm$p <- p_matrices$design
 
   # Generate design matrices for lam
@@ -660,7 +729,7 @@ create_design_matrices <- function(settings, data) {
       filter(loc == last_site) %>%
       droplevels()
   }
-  lam_matrices <- generate_design_matrix(settings$frm$lam, lam_data_fn, "lam")
+  lam_matrices <- generate_design_matrix(settings$frms$lam, lam_data_fn, "lam")
   dm$lam <- lam_matrices$design
 
   # Generate design matrices for eta
@@ -674,7 +743,7 @@ create_design_matrices <- function(settings, data) {
       filter(loc != last_site) %>%
       droplevels()
   }
-  eta_matrices <- generate_design_matrix(settings$frm$eta, eta_data_fn, "eta")
+  eta_matrices <- generate_design_matrix(settings$frms$eta, eta_data_fn, "eta")
   dm$eta <- eta_matrices$design  # Only one formula for eta
 
 
@@ -689,7 +758,7 @@ create_design_matrices <- function(settings, data) {
       filter(loc != tag_site) %>%
       droplevels()
   }
-  time_matrices <- generate_design_matrix(settings$frm$time, time_data_fn, "time")
+  time_matrices <- generate_design_matrix(settings$frms$tau, time_data_fn, "tau")
   dm$tau <- time_matrices$design  # Only one formula for eta
 
   return(list(dm = dm, data = data))
@@ -719,14 +788,6 @@ create_pred_matrices <- function(object, basis, new_grid) {
       }
       current_formula <- formula_list[[pi]]
       tmp_data <- data_subset()
-      # print(model_type)
-      # print(current_formula)
-      # print("basis")
-      # print(basis$phi)
-      # print('gregexpr')
-      # print(attr(gregexpr("\\|",current_formula)[[1]],"match.length"))
-      # print('useBytes')
-      # print(attr(gregexpr("\\|",current_formula)[[1]],"useBytes"))
 
       tryCatch({
         if(max(attr(gregexpr("\\|",current_formula)[[1]],"match.length"))>0){
@@ -740,8 +801,6 @@ create_pred_matrices <- function(object, basis, new_grid) {
           }
         }else{
           design_matrices[[i]] <- list()
-          # print('names(basis)')
-          # print(names(basis[[model_type]][[i]]))
           #you need to get the original poly basis transformation for consistency
           if(max(attr(gregexpr("poly", current_formula)[[1]],"match.length"))>(-1)){
             design_matrices[[i]]$X <- model.matrix(formula(current_formula), tmp_data)
@@ -823,7 +882,7 @@ create_pred_matrices <- function(object, basis, new_grid) {
       filter(loc != tag_site) %>%
       droplevels()
   }
-  time_matrices <- generate_design_matrix(object@MR_settings$frm$time, time_data_fn, "time", basis)
+  time_matrices <- generate_design_matrix(object@MR_settings$frm$tau, time_data_fn, "tau", basis)
   dm$tau <- time_matrices$design  # Only one formula for eta
 
   return(list(dm = dm))

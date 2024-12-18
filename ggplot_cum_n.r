@@ -7,18 +7,18 @@ plot_data <- function(my_fit){
     mutate(obs_n = n*!is.na(time)) %>%
     mutate(pred_n = n*omega*cum_phi) %>%
     select(loc,time,ReleaseSite,n,id,wk,pred_time,pred_n,obs_n) %>%
-    filter(loc == "RRJ") %>%
+    filter(loc == fit@MR_settings$dv$loc) %>%
     mutate(arrival_day = wk + pred_time/7) %>%
     mutate(obs_day = wk + time/7) %>%
     group_by(ReleaseSite,arrival_day) %>%
     summarise(obs_n = sum(obs_n),
-              pred_n = sum(pred_n)) %>%
-    pivot_longer(cols = c(obs_n,pred_n), names_to = "est") #%>%
+              pred_n = sum(pred_n)) #%>%
+    # pivot_longer(cols = c(obs_n,pred_n), names_to = "est") #%>%
 
-  df <- df %>%
-    mutate(
-      est = factor(est, levels = c("obs_n", "pred_n"))
-    )
+  # df <- df %>%
+  #   mutate(
+  #     est = factor(est, levels = c("obs_n", "pred_n"))
+  #   )
   return(df)
 }
 
