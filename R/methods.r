@@ -207,7 +207,7 @@ setMethod("MStmb", "tmb_list", function(object) {
                       eta_re = rep(0 , sum(unlist(eta_re_dim))),
                       eta_re_sig = rep(0 , sum(unlist(eta_re_sig))),
                       tau = rep(2, sum(unlist(tau_dim))),
-                      tau_sig = rep(1,max(1,sum(unlist(tau_dim))-1)),
+                      tau_sig = rep(1,length(tau_dim)),
                       tau_re = rep(0 , sum(unlist(tau_re_dim))),
                       tau_re_sig = rep(2 , sum(unlist(tau_re_sig)))
                       )
@@ -219,13 +219,14 @@ setMethod("MStmb", "tmb_list", function(object) {
   map <- list()
   if(MR_settings$mod=="MS"){
     map = append(map,
-                 list(tau_sig = as.factor(rep(NA,min(1,sum(unlist(tau_dim))))),
-                      tau = as.factor(rep(NA, sum(unlist(tau_dim)))),
-                      tau_re = as.factor(rep(NA , sum(unlist(tau_re_dim)))),
-                      tau_re_sig = as.factor(rep(NA , sum(unlist(tau_re_sig))))
+                 list(tau_sig = as.factor(rep(NA,length(tau_dim)))
+                      ,tau = as.factor(rep(NA, sum(unlist(tau_dim))))
+                      ,tau_re = as.factor(rep(NA , sum(unlist(tau_re_dim))))
+                      ,tau_re_sig = as.factor(rep(NA , sum(unlist(tau_re_sig))))
                  )
                  )
   }
+  print(map)
 
   obj <- RTMB::MakeADFun(test_f,
                          parameters,

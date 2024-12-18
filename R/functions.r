@@ -326,7 +326,7 @@ test_f <- function(parms){
       # tau_acc <- 0
       data_est[ij_cnt] <- 1
       ij_cnt <- ij_cnt + 1
-      tau_scale <- rep(1, length(t_obs))
+      tau_scale <- rep(0, length(t_obs))
 
       for(j in (init_loc+1):length(i_obs)){
         # if(MR_settings$mod == "MSt"){
@@ -337,18 +337,19 @@ test_f <- function(parms){
           }
           tau_scale[s] <- tau_pred[s,t_cnt]
         }
-        if(!is.na(t_obs[j])){
+
+        if(!is.na(t_obs[j]) & MR_settings$mod=="MSt"){
           nll2 <- nll2 - RTMB::dnorm((t_obs[j]), (tau_pred[i_obs[j],t_cnt]), exp(tau_sig[i_obs[j]]), log = TRUE) * n_i
         }
 
         if(j < length(i_obs)){
           for(s in 1:(ns-1)){ #don't do the last state - "unk"
 
-            tau_pred[s,t_cnt] <- exp(t(dm$tau[[init_state]]$X[t_cnt,]) %*% tau_s[[init_state]])
-            if(tau_re_dim[[s]]>0){
-              tau_pred[s,t_cnt] <- tau_pred[s,t_cnt] * exp(t(dm$tau[[init_state]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[init_state]])
-            }
-            tau_scale[s] <- tau_pred[s,t_cnt]
+            # tau_pred[s,t_cnt] <- exp(t(dm$tau[[init_state]]$X[t_cnt,]) %*% tau_s[[init_state]])
+            # if(tau_re_dim[[s]]>0){
+            #   tau_pred[s,t_cnt] <- tau_pred[s,t_cnt] * exp(t(dm$tau[[init_state]]$reTrms$Zt[,t_cnt]) %*% tau_re_s[[init_state]])
+            # }
+            # tau_scale[s] <- tau_pred[s,t_cnt]
 
             # if(phi_dim[[s]]>0){
               gamma[s,s,j,id_cnt] <- t(dm$phi[[s]]$X[ii,]) %*% phi_s[[s]]
@@ -426,6 +427,14 @@ test_f <- function(parms){
         if(MR_settings$mod == "MSt"){
 
           tmp_gamma <- RTMB::diag(tau_scale) %*% (gamma[,,j,id_cnt])
+          if(j == 2 & id_cnt < 10){
+            print("tau")
+            print(RTMB::diag(tau_scale))
+            print("with tau")
+            print(Matrix::expm(tmp_gamma))
+            print("without tau")
+            print(Matrix::expm(gamma[,,j,id_cnt]))
+          }
           gamma[,,j,id_cnt] <- tmp_gamma
           prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
             Matrix::expm(tmp_gamma) %*%
@@ -434,6 +443,9 @@ test_f <- function(parms){
         }else{
 
           tmp_gamma <- Matrix::expm((gamma[,,j,id_cnt]))
+          if(j == 2 & id_cnt < 10){
+            # print(round(Matrix::expm(tmp_gamma),2))
+          }
           prods[[j - init_loc + 1]] <-  prods[[j - init_loc]] %*%
             tmp_gamma %*%
             tmp_omega
@@ -507,10 +519,10 @@ test_f <- function(parms){
 
   pd <- tmb.data$pred.grid
   pdm <- tmb.data$pred$dm
-  id_cnt <- 1 #fish group increment
-  ii <- 1 #design matrix increment
-  t_cnt <- 1
-  eta_ii <- 1 #transition matrix increment
+  # id_cnt <- 1 #fish group increment
+  # ii <- 1 #design matrix increment
+  # t_cnt <- 1
+  # eta_ii <- 1 #transition matrix increment
   pni <- length(unique(pd$id))
   gamma_pred <- array(0,dim = c(ns,ns, length(levels(data$loc)), pni), #),#,ni,
                       dimnames = list(next_state = levels(state),
@@ -639,6 +651,7 @@ test_f <- function(parms){
   RTMB::REPORT(omega)
   RTMB::REPORT(nll2)
   RTMB::REPORT(prods)
+  RTMB::REPORT(t_cnt)
   if(MR_settings$mod=="CJS"){
     RTMB::REPORT(phi_tmp)
     RTMB::REPORT(p_tmp)

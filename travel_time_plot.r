@@ -1,21 +1,33 @@
+state <- "yr"
+# loc <- "as.Smolt"
+loc <- "As.Adult.ballard"
 
-err <- as.list(sd,"Std. Error", report=TRUE)
+state_id <- which(levels(tmb.data$data$state)%in%state, arr.ind = TRUE)
 
-xx <- cbind(fit@TMB$obj$tmb.data$pred.grid[fit@TMB$obj$tmb.data$pred.grid$loc=="as.Smolt",],
-      est = fit@TMB$rep$omega_pred,
-      err = err$omega_pred) %>%
-  filter(state == "yr") %>%
-  ggplot(aes(x = as.numeric(wk), y = plogis(est))) +
-  geom_line() +
-  geom_ribbon(aes(ymax = plogis(est + 1.96 * err),
-                  ymin = plogis(est - 1.96 * err),
-                  # fill = as.factor(fY)
-                  ),
-              color = NA,
-              alpha = 0.2) +
-  facet_wrap(~fY, ncol = 4) +
-  theme_classic()
 
-print(xx)
+summary_df <- data.frame(fit@TMB$obj$tmb.data$data[fit@TMB$obj$tmb.data$data$loc %in%
+                                                     c("as.Smolt","As.Adult.ballard"),],
+                         est = fit@TMB$rep$tau_pred[state_id,]) %>%
+  filter(loc == !!loc & state == !!state) %>%
+  group_by(loc, state, wk) %>%
+  summarize(mean_time = sum((time*n)/sum(n)), .groups = "drop") %>%
+  ungroup()
 
+xx <- data.frame(fit@TMB$obj$tmb.data$data[fit@TMB$obj$tmb.data$data$loc %in%
+                                             c("as.Smolt","As.Adult.ballard"),],
+                 est = fit@TMB$rep$tau_pred[state_id,]) %>%
+  filter(loc == !!loc & state == !!state) %>%
+  left_join(summary_df, by = c("wk", "loc", "state")) %>%
+  ggplot(aes(x = as.factor(wk), y = time)) +
+  geom_boxplot() +
+  stat_summary(aes(group = 1), colour = "black",
+               geom = "line", fun.y = "median") +   # geom_point(aes(x = wk, y = mean_time, color = "red", size = 5)) +
+  # geom_point(aes(x = as.factor(wk), y = mean_time, color = "blue", size = 5)) +
+  geom_point(aes(x = as.factor(wk), y = est, color = "green", size = 5)) +
+  ylab("Travel time in weeks") +
+  xlab("Tagging date") +
+  theme_bw()
+  # facet_grid(~wk)
+
+  print(xx)
 
